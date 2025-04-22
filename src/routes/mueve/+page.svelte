@@ -1,6 +1,4 @@
 <script>
-	import { onMount } from 'svelte';
-
 	let canvas;
 
 	const canvasWidth = 600;
@@ -85,7 +83,7 @@
 		animationId = requestAnimationFrame(gameLoop);
 	}
 
-	onMount(() => {
+	$effect(() => {
 		if (!canvas) return;
 
 		// Start the game loop
