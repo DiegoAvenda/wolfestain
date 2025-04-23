@@ -1,98 +1,73 @@
 <script>
 	import { onMount } from 'svelte';
-
 	let canvas;
-
 	const canvasWidth = 600;
-	const canvasHeight = 300;
+	const canvasHeight = 600;
 	let playerX = $state(canvasWidth / 2);
 	let playerY = $state(canvasHeight / 2);
-	const playerRadius = 20;
+	let playerRadius = 50;
 	let angle = $state(0);
-	const velocity = 4;
-	let animationId;
-
-	// Track which keys are currently pressed
-	const keysPressed = $state({
-		ArrowUp: false,
-		ArrowDown: false,
+	const velocity = 3;
+	let keysPressed = $state({
+		ArrowRight: false,
 		ArrowLeft: false,
-		ArrowRight: false
+		ArrowUp: false,
+		ArrowDown: false
 	});
 
-	// Handle keydown events
 	function handleKeydown(event) {
-		if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+		if (event.key in keysPressed) {
 			keysPressed[event.key] = true;
-			// Prevent default to stop scrolling when using arrow keys
-			event.preventDefault();
 		}
 	}
 
-	// Handle keyup events
 	function handleKeyup(event) {
-		if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+		if (event.key in keysPressed) {
 			keysPressed[event.key] = false;
 		}
 	}
 
-	// Game loop for smooth movement
-	function gameLoop() {
-		// Rotate based on left/right keys
-		if (keysPressed.ArrowLeft) {
-			angle -= 0.05; // Reduced rotation speed for smoother turning
-		}
+	function movePlayer() {
 		if (keysPressed.ArrowRight) {
-			angle += 0.05;
+			angle += 0.1;
 		}
-
-		// Move based on up/down keys
+		if (keysPressed.ArrowLeft) {
+			angle -= 0.1;
+		}
 		if (keysPressed.ArrowUp) {
-			playerX += velocity * Math.cos(angle);
-			playerY += velocity * Math.sin(angle);
+			playerX += Math.cos(angle) * velocity;
+			playerY += Math.sin(angle) * velocity;
 		}
 		if (keysPressed.ArrowDown) {
-			playerX -= velocity * Math.cos(angle);
-			playerY -= velocity * Math.sin(angle);
+			playerX -= Math.cos(angle) * velocity;
+			playerY -= Math.sin(angle) * velocity;
 		}
+	}
 
-		// Add boundary checking
-		playerX = Math.max(playerRadius, Math.min(canvasWidth - playerRadius, playerX));
-		playerY = Math.max(playerRadius, Math.min(canvasHeight - playerRadius, playerY));
-
-		// Draw everything
+	function gameLoop() {
 		const ctx = canvas.getContext('2d');
 		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
-		// Draw the border of the canvas
 		ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
 
-		// Draw the player
 		ctx.beginPath();
 		ctx.arc(playerX, playerY, playerRadius, 0, 2 * Math.PI);
 		ctx.stroke();
 
-		// Draw the direction indicator
 		ctx.beginPath();
 		ctx.moveTo(playerX, playerY);
 		ctx.lineTo(
-			playerX + Math.cos(angle) * playerRadius * 2,
-			playerY + Math.sin(angle) * playerRadius * 2
+			playerX + playerRadius * 2 * Math.cos(angle),
+			playerY + playerRadius * 2 * Math.sin(angle)
 		);
 		ctx.stroke();
 
-		// Request next frame
-		animationId = requestAnimationFrame(gameLoop);
+		movePlayer();
+
+		requestAnimationFrame(gameLoop);
 	}
 
 	onMount(() => {
-		if (!canvas) return;
-
-		// Start the game loop
-		animationId = requestAnimationFrame(gameLoop);
-
-		// Return a cleanup function to cancel the animation frame when the component is unmounted
-		return () => cancelAnimationFrame(animationId);
+		gameLoop();
 	});
 </script>
 
