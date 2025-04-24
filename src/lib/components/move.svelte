@@ -1,48 +1,19 @@
 <script>
 	import { onMount } from 'svelte';
-
 	let canvas;
 	const canvasWidth = 600;
 	const canvasHeight = 600;
 	let playerX = $state(canvasWidth / 2);
 	let playerY = $state(canvasHeight / 2);
-	const playerRadius = 50;
+	let playerRadius = 50;
 	let angle = $state(0);
-	let cos = $derived(Math.cos(angle));
-	let sin = $derived(Math.sin(angle));
 	const velocity = 3;
-	const tileSize = 10;
 	let keysPressed = $state({
 		ArrowRight: false,
 		ArrowLeft: false,
 		ArrowUp: false,
 		ArrowDown: false
 	});
-
-	const map = [
-		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-	];
-
-	function generateMap(ctx) {
-		for (let x = 0; x < map[0].length; x++) {
-			for (let y = 0; y < map.length; y++) {
-				if (map[y][x] === 1) {
-					ctx.fillRect(tileSize * x, tileSize * y, tileSize, tileSize);
-				} else {
-				}
-				ctx.strokeRect(tileSize * x, tileSize * y, tileSize, tileSize);
-			}
-		}
-	}
 
 	function handleKeydown(event) {
 		if (event.key in keysPressed) {
@@ -64,12 +35,12 @@
 			angle -= 0.1;
 		}
 		if (keysPressed.ArrowUp) {
-			playerX += cos * velocity;
-			playerY += sin * velocity;
+			playerX += Math.cos(angle) * velocity;
+			playerY += Math.sin(angle) * velocity;
 		}
 		if (keysPressed.ArrowDown) {
-			playerX -= cos * velocity;
-			playerY -= sin * velocity;
+			playerX -= Math.cos(angle) * velocity;
+			playerY -= Math.sin(angle) * velocity;
 		}
 	}
 
@@ -84,10 +55,12 @@
 
 		ctx.beginPath();
 		ctx.moveTo(playerX, playerY);
-		ctx.lineTo(playerX + playerRadius * 2 * cos, playerY + playerRadius * 2 * sin);
+		ctx.lineTo(
+			playerX + playerRadius * 2 * Math.cos(angle),
+			playerY + playerRadius * 2 * Math.sin(angle)
+		);
 		ctx.stroke();
 
-		generateMap(ctx);
 		movePlayer();
 
 		requestAnimationFrame(gameLoop);
@@ -98,8 +71,5 @@
 	});
 </script>
 
-<p>angle: {angle}</p>
-<p>cos: {cos}</p>
-<p>sin: {sin}</p>
 <canvas bind:this={canvas} width={canvasWidth} height={canvasHeight}></canvas>
 <svelte:window onkeydown={handleKeydown} onkeyup={handleKeyup} />
