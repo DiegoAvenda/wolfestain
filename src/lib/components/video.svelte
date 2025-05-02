@@ -7,7 +7,7 @@
 	const canvasHeight = mapSideSize;
 	const squareSize = mapSideSize / 10;
 	let playerX = $state(canvasWidth / 2);
-	let playerY = $state(canvasHeight / 2);
+	let playerY = $state(canvasHeight / 2 + 60);
 	const playerRadius = 50;
 	let angle = $state(0);
 	let cos = $derived(Math.cos(angle));
@@ -33,6 +33,17 @@
 		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
 		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 	];
+
+	function detectCollision(x, y) {
+		let cellX = Math.floor(x / squareSize);
+		let cellY = Math.floor(y / squareSize);
+
+		if (map[cellY][cellX] === 1) {
+			return true;
+		}
+
+		return false;
+	}
 
 	function drawMap(ctx) {
 		for (let y = 0; y < map.length; y++) {
@@ -65,12 +76,22 @@
 			angle -= 0.1;
 		}
 		if (keysPressed.ArrowUp) {
-			playerX += cos * velocity;
-			playerY += sin * velocity;
+			let nextX = playerX + cos * velocity;
+			let nextY = playerY + sin * velocity;
+
+			if (!detectCollision(nextX, nextY)) {
+				playerX = nextX;
+				playerY = nextY;
+			}
 		}
 		if (keysPressed.ArrowDown) {
-			playerX -= cos * velocity;
-			playerY -= sin * velocity;
+			let nextX = playerX - cos * velocity;
+			let nextY = playerY - sin * velocity;
+
+			if (!detectCollision(nextX, nextY)) {
+				playerX = nextX;
+				playerY = nextY;
+			}
 		}
 	}
 
