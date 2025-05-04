@@ -99,6 +99,28 @@
 		}
 	}
 
+	function ray(ctx) {
+		let rayX = playerX;
+		let rayY = playerY;
+
+		while (true) {
+			let stepX = cos * velocity;
+			let stepY = sin * velocity;
+
+			ctx.beginPath();
+			ctx.moveTo(playerX, playerY);
+
+			rayX += stepX;
+			rayY += stepY;
+
+			if (detectCollision(rayX, rayY)) {
+				ctx.lineTo(rayX, rayY);
+				break;
+			}
+		}
+		ctx.stroke();
+	}
+
 	function gameLoop() {
 		const ctx = canvas.getContext('2d');
 		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -115,6 +137,7 @@
 
 		drawMap(ctx);
 		movePlayer();
+		ray(ctx);
 
 		requestAnimationFrame(gameLoop);
 	}
