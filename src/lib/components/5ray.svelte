@@ -68,6 +68,25 @@
 		}
 	}
 
+	function ray(ctx) {
+		let rayX = playerX;
+		let rayY = playerY;
+
+		while (true) {
+			ctx.beginPath();
+			ctx.moveTo(playerX, playerY);
+
+			rayX += cos * velocity;
+			rayY += sin * velocity;
+
+			if (detectCollision(rayX, rayY)) {
+				ctx.lineTo(rayX, rayY);
+				break;
+			}
+		}
+		ctx.stroke();
+	}
+
 	function movePlayer() {
 		if (keysPressed.ArrowRight) {
 			angle += 0.1;
@@ -90,39 +109,13 @@
 			let nextX = playerX - cos * velocity;
 			let nextY = playerY - sin * velocity;
 
-			if (!detectCollision(nextX, nextY)) {
+			if (!detectCollision(nextX, playerY)) {
 				playerX = nextX;
+			}
+			if (!detectCollision(playerX, nextY)) {
 				playerY = nextY;
 			}
 		}
-	}
-
-	function drawRays(ctx) {
-		const rayLength = 1000; // Longitud máxima del rayo
-
-		// Calcular la dirección del rayo basado en el ángulo del jugador
-		let rayX = playerX;
-		let rayY = playerY;
-
-		while (true) {
-			// Incrementos para avanzar el rayo
-			const stepX = cos * velocity; // Incremento en X
-			const stepY = sin * velocity; // Incremento en Y
-
-			// Dibujar el rayo
-			ctx.beginPath();
-			ctx.moveTo(playerX, playerY);
-
-			rayX += stepX;
-			rayY += stepY;
-
-			// Verificar si el rayo colisiona con una pared
-			if (detectCollision(rayX, rayY)) {
-				ctx.lineTo(rayX, rayY);
-				break;
-			}
-		}
-		ctx.stroke();
 	}
 
 	function gameLoop() {
@@ -134,9 +127,14 @@
 		ctx.arc(playerX, playerY, playerRadius, 0, 2 * Math.PI);
 		ctx.stroke();
 
+		ctx.beginPath();
+		ctx.moveTo(playerX, playerY);
+		ctx.lineTo(playerX + playerRadius * 2 * cos, playerY + playerRadius * 2 * sin);
+		ctx.stroke();
+
 		drawMap(ctx);
 		movePlayer();
-		drawRays(ctx);
+		ray(ctx);
 
 		requestAnimationFrame(gameLoop);
 	}

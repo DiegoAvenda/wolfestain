@@ -10,8 +10,6 @@
 	let playerY = $state(canvasHeight / 2 + 60);
 	const playerRadius = 50;
 	let angle = $state(0);
-	let cos = $derived(Math.cos(angle));
-	let sin = $derived(Math.sin(angle));
 	const velocity = 3;
 
 	let keysPressed = $state({
@@ -33,6 +31,9 @@
 		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
 		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 	];
+
+	const cos = (angle) => Math.cos(angle);
+	const sin = (angle) => Math.sin(angle);
 
 	function detectCollision(x, y) {
 		let cellX = Math.floor(x / squareSize);
@@ -76,8 +77,8 @@
 			angle -= 0.1;
 		}
 		if (keysPressed.ArrowUp) {
-			let nextX = playerX + cos * velocity;
-			let nextY = playerY + sin * velocity;
+			let nextX = playerX + cos(angle) * velocity;
+			let nextY = playerY + sin(angle) * velocity;
 
 			if (!detectCollision(nextX, playerY)) {
 				playerX = nextX;
@@ -87,8 +88,8 @@
 			}
 		}
 		if (keysPressed.ArrowDown) {
-			let nextX = playerX - cos * velocity;
-			let nextY = playerY - sin * velocity;
+			let nextX = playerX - cos(angle) * velocity;
+			let nextY = playerY - sin(angle) * velocity;
 
 			if (!detectCollision(nextX, playerY)) {
 				playerX = nextX;
@@ -99,37 +100,29 @@
 		}
 	}
 
-	function drawRayFan(ctx) {
-		const fov = Math.PI / 3; // 60° field of view
-		const rayCount = 50; // Número de rayos en el abanico
-		const angleStep = fov / rayCount; // Incremento de ángulo por rayo
+	function ray(ctx) {
+		const rays = 50;
+		const fov = Math.PI / 3;
+		const rayStep = fov / rays;
 
-		for (let i = 0; i <= rayCount; i++) {
-			const rayAngle = angle - fov / 2 + i * angleStep; // Ángulo actual del rayo
+		for (let i = 0; i < rays; i++) {
+			let rayAngle = angle - fov / 2 + i * rayStep;
 
-			// Calcular dirección del rayo basado en el ángulo
 			let rayX = playerX;
 			let rayY = playerY;
-			const stepX = Math.cos(rayAngle) * velocity;
-			const stepY = Math.sin(rayAngle) * velocity;
 
-			// Dibujar el rayo
 			ctx.beginPath();
 			ctx.moveTo(playerX, playerY);
 
 			while (true) {
-				rayX += stepX;
-				rayY += stepY;
+				rayX += cos(rayAngle) * velocity;
+				rayY += sin(rayAngle) * velocity;
 
-				// Verificar colisión
 				if (detectCollision(rayX, rayY)) {
 					ctx.lineTo(rayX, rayY);
 					break;
 				}
 			}
-
-			ctx.strokeStyle = 'red'; // Color del rayo
-			ctx.lineWidth = 1;
 			ctx.stroke();
 		}
 	}
@@ -145,7 +138,7 @@
 
 		drawMap(ctx);
 		movePlayer();
-		drawRayFan(ctx);
+		ray(ctx);
 
 		requestAnimationFrame(gameLoop);
 	}

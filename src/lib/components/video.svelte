@@ -10,8 +10,6 @@
 	let playerY = $state(canvasHeight / 2 + 60);
 	const playerRadius = 50;
 	let angle = $state(0);
-	let cos = $derived(Math.cos(angle));
-	let sin = $derived(Math.sin(angle));
 	const velocity = 3;
 
 	let keysPressed = $state({
@@ -33,6 +31,9 @@
 		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
 		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 	];
+
+	const cos = (angle) => Math.cos(angle);
+	const sin = (angle) => Math.sin(angle);
 
 	function detectCollision(x, y) {
 		let cellX = Math.floor(x / squareSize);
@@ -76,8 +77,8 @@
 			angle -= 0.1;
 		}
 		if (keysPressed.ArrowUp) {
-			let nextX = playerX + cos * velocity;
-			let nextY = playerY + sin * velocity;
+			let nextX = playerX + cos(angle) * velocity;
+			let nextY = playerY + sin(angle) * velocity;
 
 			if (!detectCollision(nextX, playerY)) {
 				playerX = nextX;
@@ -87,8 +88,8 @@
 			}
 		}
 		if (keysPressed.ArrowDown) {
-			let nextX = playerX - cos * velocity;
-			let nextY = playerY - sin * velocity;
+			let nextX = playerX - cos(angle) * velocity;
+			let nextY = playerY - sin(angle) * velocity;
 
 			if (!detectCollision(nextX, playerY)) {
 				playerX = nextX;
@@ -96,6 +97,33 @@
 			if (!detectCollision(playerX, nextY)) {
 				playerY = nextY;
 			}
+		}
+	}
+
+	function ray(ctx) {
+		const rays = 50;
+		const fov = Math.PI / 3;
+		const rayStep = fov / rays;
+
+		for (let i = 0; i < rays; i++) {
+			let rayAngle = angle - fov / 2 + i * rayStep;
+
+			let rayX = playerX;
+			let rayY = playerY;
+
+			ctx.beginPath();
+			ctx.moveTo(playerX, playerY);
+
+			while (true) {
+				rayX += cos(rayAngle) * velocity;
+				rayY += sin(rayAngle) * velocity;
+
+				if (detectCollision(rayX, rayY)) {
+					ctx.lineTo(rayX, rayY);
+					break;
+				}
+			}
+			ctx.stroke();
 		}
 	}
 
@@ -108,13 +136,9 @@
 		ctx.arc(playerX, playerY, playerRadius, 0, 2 * Math.PI);
 		ctx.stroke();
 
-		ctx.beginPath();
-		ctx.moveTo(playerX, playerY);
-		ctx.lineTo(playerX + playerRadius * 2 * cos, playerY + playerRadius * 2 * sin);
-		ctx.stroke();
-
 		drawMap(ctx);
 		movePlayer();
+		ray(ctx);
 
 		requestAnimationFrame(gameLoop);
 	}
