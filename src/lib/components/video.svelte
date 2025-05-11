@@ -101,29 +101,33 @@
 	}
 
 	function ray(ctx) {
-		const rays = 50;
+		const rays = 100;
 		const fov = Math.PI / 3;
 		const rayStep = fov / rays;
+
+		const middleY = canvasHeight / 2;
 
 		for (let i = 0; i < rays; i++) {
 			let rayAngle = angle - fov / 2 + i * rayStep;
 
 			let rayX = playerX;
 			let rayY = playerY;
-
-			ctx.beginPath();
-			ctx.moveTo(playerX, playerY);
+			let distance = 0;
 
 			while (true) {
-				rayX += cos(rayAngle) * velocity;
-				rayY += sin(rayAngle) * velocity;
+				rayX += cos(rayAngle);
+				rayY += sin(rayAngle);
+				distance += 1;
 
 				if (detectCollision(rayX, rayY)) {
-					ctx.lineTo(rayX, rayY);
 					break;
 				}
 			}
-			ctx.stroke();
+			const columnHeight = (squareSize * canvasHeight) / distance;
+			const columnWidth = canvasWidth / rays;
+			const columnX = i * columnWidth;
+
+			ctx.fillRect(columnX, middleY - columnHeight / 2, columnWidth, columnHeight);
 		}
 	}
 
