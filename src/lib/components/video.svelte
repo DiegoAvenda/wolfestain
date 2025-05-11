@@ -46,17 +46,6 @@
 		return false;
 	}
 
-	function drawMap(ctx) {
-		for (let y = 0; y < map.length; y++) {
-			for (let x = 0; x < map[y].length; x++) {
-				if (map[y][x] === 1) {
-					ctx.fillRect(squareSize * x, squareSize * y, squareSize, squareSize);
-				}
-				ctx.strokeRect(squareSize * x, squareSize * y, squareSize, squareSize);
-			}
-		}
-	}
-
 	function handleKeydown(event) {
 		if (event.key in keysPressed) {
 			keysPressed[event.key] = true;
@@ -123,7 +112,9 @@
 					break;
 				}
 			}
-			const columnHeight = (squareSize * canvasHeight) / distance;
+			const correctedDistance = distance * cos(rayAngle - angle);
+
+			const columnHeight = (squareSize * canvasHeight) / correctedDistance;
 			const columnWidth = canvasWidth / rays;
 			const columnX = i * columnWidth;
 
@@ -136,11 +127,6 @@
 		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 		ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
 
-		ctx.beginPath();
-		ctx.arc(playerX, playerY, playerRadius, 0, 2 * Math.PI);
-		ctx.stroke();
-
-		drawMap(ctx);
 		movePlayer();
 		ray(ctx);
 
@@ -150,7 +136,18 @@
 	onMount(() => {
 		gameLoop();
 	});
+
+	const distancia = 50;
+	const anguloRayo = 0.5;
+	const angulo = 0;
+	const coseno = cos(anguloRayo - angulo);
+	const ojoPescado = distancia * coseno;
 </script>
 
+<p>ojoPescado: {ojoPescado}</p>
+<p>coseno: {coseno}</p>
+<p>distancia: {distancia}</p>
+<p>angulo rayo: {anguloRayo}</p>
+<p>angulo: {angulo}</p>
 <canvas bind:this={canvas} width={canvasWidth} height={canvasHeight}></canvas>
 <svelte:window onkeydown={handleKeydown} onkeyup={handleKeyup} />
