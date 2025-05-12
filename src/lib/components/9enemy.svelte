@@ -128,6 +128,7 @@
 			const columnX = i * columnWidth;
 
 			// Dibujar pared
+			ctx.fillStyle = 'gray';
 			ctx.fillRect(columnX, middleY - columnHeight / 2, columnWidth, columnHeight);
 		}
 
@@ -167,6 +168,7 @@
 			}
 
 			if (isVisible) {
+				ctx.fillStyle = enemy.color;
 				ctx.fillRect(
 					screenX - spriteHeight / 4,
 					canvasHeight / 2 - spriteHeight / 2,
@@ -195,3 +197,11 @@
 
 <canvas bind:this={canvas} width={canvasWidth} height={canvasHeight}></canvas>
 <svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
+
+<style>
+	canvas {
+		display: block;
+		margin: 0 auto;
+		background-color: black;
+	}
+</style>

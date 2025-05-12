@@ -16,7 +16,14 @@
 	// Enemigo
 	let enemy = $state({
 		x: 3 * squareSize + squareSize / 2,
-		y: 3 * squareSize + squareSize / 2
+		y: 3 * squareSize + squareSize / 2,
+		size: squareSize / 2,
+		speed: 1.5,
+		health: 100,
+		damage: 10,
+		attackCooldown: 0,
+		state: 'patrol', // 'patrol', 'chase', 'attack'
+		color: 'red'
 	});
 
 	let keysPressed = $state({
@@ -96,6 +103,74 @@
 		}
 	}
 
+	// Detección de visión del enemigo
+	function canEnemySeePlayer() {
+		// Ángulo hacia el jugador
+		const angleToPlayer = Math.atan2(playerY - enemy.y, playerX - enemy.x);
+
+		// Lanzar un rayo desde el enemigo hacia el jugador
+		let rayX = enemy.x;
+		let rayY = enemy.y;
+		let distance = 0;
+		const maxDistance = 10 * squareSize;
+
+		while (distance < maxDistance) {
+			rayX += cos(angleToPlayer) * 5;
+			rayY += sin(angleToPlayer) * 5;
+			distance += 5;
+
+			// Si choca con una pared, no puede ver al jugador
+			if (detectCollision(rayX, rayY)) {
+				return false;
+			}
+
+			// Si llega cerca del jugador, lo ha visto
+			const distToPlayer = Math.sqrt((playerX - rayX) ** 2 + (playerY - rayY) ** 2);
+			if (distToPlayer < playerRadius) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// IA del enemigo
+	function updateEnemy() {
+		const distToPlayer = Math.sqrt((playerX - enemy.x) ** 2 + (playerY - enemy.y) ** 2);
+
+		// Lógica de estados
+		if (distToPlayer < squareSize) {
+			enemy.state = 'attack';
+		} else if (canEnemySeePlayer() || distToPlayer < 3 * squareSize) {
+			enemy.state = 'chase';
+		} else {
+			enemy.state = 'patrol';
+		}
+
+		// Comportamiento según estado
+		if (enemy.state === 'chase') {
+			// Moverse hacia el jugador
+			const angleToPlayer = Math.atan2(playerY - enemy.y, playerX - enemy.x);
+			const moveX = cos(angleToPlayer) * enemy.speed;
+			const moveY = sin(angleToPlayer) * enemy.speed;
+
+			if (!detectCollision(enemy.x + moveX, enemy.y)) {
+				enemy.x += moveX;
+			}
+			if (!detectCollision(enemy.x, enemy.y + moveY)) {
+				enemy.y += moveY;
+			}
+		} else if (enemy.state === 'attack' && enemy.attackCooldown <= 0) {
+			// Atacar al jugador
+			playerHealth -= enemy.damage;
+			enemy.attackCooldown = 60; // 1 segundo (60 frames)
+		}
+
+		// Enfriamiento de ataque
+		if (enemy.attackCooldown > 0) {
+			enemy.attackCooldown--;
+		}
+	}
+
 	function ray(ctx) {
 		const rays = 100;
 		const fov = Math.PI / 3;
@@ -128,6 +203,7 @@
 			const columnX = i * columnWidth;
 
 			// Dibujar pared
+			ctx.fillStyle = 'gray';
 			ctx.fillRect(columnX, middleY - columnHeight / 2, columnWidth, columnHeight);
 		}
 
@@ -167,6 +243,7 @@
 			}
 
 			if (isVisible) {
+				ctx.fillStyle = enemy.color;
 				ctx.fillRect(
 					screenX - spriteHeight / 4,
 					canvasHeight / 2 - spriteHeight / 2,
@@ -177,13 +254,98 @@
 		}
 	}
 
+	function drawMinimap(ctx) {
+		const minimapSize = 150;
+		const scale = minimapSize / mapSideSize;
+		const offset = 10;
+
+		// Dibujar mapa
+		ctx.fillStyle = 'white';
+		ctx.fillRect(offset, offset, minimapSize, minimapSize);
+
+		// Dibujar paredes
+		ctx.fillStyle = 'black';
+		for (let y = 0; y < map.length; y++) {
+			for (let x = 0; x < map[y].length; x++) {
+				if (map[y][x] === 1) {
+					ctx.fillRect(
+						offset + x * squareSize * scale,
+						offset + y * squareSize * scale,
+						squareSize * scale,
+						squareSize * scale
+					);
+				}
+			}
+		}
+
+		// Dibujar jugador
+		ctx.fillStyle = 'blue';
+		ctx.beginPath();
+		ctx.arc(
+			offset + playerX * scale,
+			offset + playerY * scale,
+			playerRadius * scale,
+			0,
+			Math.PI * 2
+		);
+		ctx.fill();
+
+		// Dibujar dirección del jugador
+		ctx.strokeStyle = 'blue';
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.moveTo(offset + playerX * scale, offset + playerY * scale);
+		ctx.lineTo(
+			offset + (playerX + cos(angle) * playerRadius * 2) * scale,
+			offset + (playerY + sin(angle) * playerRadius * 2) * scale
+		);
+		ctx.stroke();
+
+		// Dibujar enemigo
+		ctx.fillStyle = 'red';
+		ctx.beginPath();
+		ctx.arc(offset + enemy.x * scale, offset + enemy.y * scale, enemy.size * scale, 0, Math.PI * 2);
+		ctx.fill();
+	}
+
+	function drawHUD(ctx) {
+		// Barra de salud
+		ctx.fillStyle = 'black';
+		ctx.fillRect(20, canvasHeight - 40, 200, 20);
+		ctx.fillStyle = playerHealth > 30 ? 'green' : 'red';
+		ctx.fillRect(20, canvasHeight - 40, 200 * (playerHealth / 100), 20);
+		ctx.strokeStyle = 'white';
+		ctx.strokeRect(20, canvasHeight - 40, 200, 20);
+
+		// Texto de salud
+		ctx.fillStyle = 'white';
+		ctx.font = '16px Arial';
+		ctx.fillText(`Salud: ${playerHealth}%`, 30, canvasHeight - 25);
+	}
+
 	function gameLoop() {
 		const ctx = canvas.getContext('2d');
 		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 		ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
 
 		movePlayer();
+		updateEnemy();
 		ray(ctx);
+		drawMinimap(ctx);
+		drawHUD(ctx);
+
+		// Game over si salud llega a 0
+		if (playerHealth <= 0) {
+			ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+			ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+			ctx.fillStyle = 'red';
+			ctx.font = '48px Arial';
+			ctx.textAlign = 'center';
+			ctx.fillText('GAME OVER', canvasWidth / 2, canvasHeight / 2);
+			ctx.font = '24px Arial';
+			ctx.fillText('Recarga la página para jugar de nuevo', canvasWidth / 2, canvasHeight / 2 + 50);
+			return;
+		}
 
 		requestAnimationFrame(gameLoop);
 	}
@@ -195,3 +357,11 @@
 
 <canvas bind:this={canvas} width={canvasWidth} height={canvasHeight}></canvas>
 <svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
+
+<style>
+	canvas {
+		display: block;
+		margin: 0 auto;
+		background-color: black;
+	}
+</style>

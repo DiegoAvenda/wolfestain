@@ -112,7 +112,9 @@
 					break;
 				}
 			}
-			const columnHeight = (squareSize * canvasHeight) / distance;
+			const correctedDistance = distance * cos(rayAngle - angle);
+
+			const columnHeight = (squareSize * canvasHeight) / correctedDistance;
 			const columnWidth = canvasWidth / rays;
 			const columnX = i * columnWidth;
 
