@@ -8,16 +8,11 @@
 	const squareSize = mapSideSize / 10;
 	let playerX = $state(canvasWidth / 2);
 	let playerY = $state(canvasHeight / 2 + 60);
-	const playerRadius = 50;
 	let angle = $state(0);
 	const velocity = 3;
-	let playerHealth = $state(100);
 
-	// Enemigo
-	let enemy = $state({
-		x: 3 * squareSize + squareSize / 2,
-		y: 3 * squareSize + squareSize / 2
-	});
+	// Un solo enemigo, movido más lejos del cubo central
+	let enemy = $state({ x: 400, y: 400, color: 'red', size: 50 });
 
 	let keysPressed = $state({
 		ArrowRight: false,
@@ -46,11 +41,15 @@
 		let cellX = Math.floor(x / squareSize);
 		let cellY = Math.floor(y / squareSize);
 
-		if (cellX < 0 || cellX >= map[0].length || cellY < 0 || cellY >= map.length) {
+		if (cellX < 0 || cellY < 0 || cellX >= 10 || cellY >= 10) {
 			return true;
 		}
 
-		return map[cellY][cellX] === 1;
+		if (map[cellY][cellX] === 1) {
+			return true;
+		}
+
+		return false;
 	}
 
 	function handleKeydown(event) {
@@ -100,13 +99,14 @@
 		const rays = 100;
 		const fov = Math.PI / 3;
 		const rayStep = fov / rays;
+
 		const middleY = canvasHeight / 2;
+		const zBuffer = [];
 
-		// Array para almacenar información de los rayos de paredes
-		let wallRayInfo = [];
-
+		// Dibujar las paredes sin sombreado ni colores
 		for (let i = 0; i < rays; i++) {
 			let rayAngle = angle - fov / 2 + i * rayStep;
+
 			let rayX = playerX;
 			let rayY = playerY;
 			let distance = 0;
@@ -120,69 +120,55 @@
 					break;
 				}
 			}
-			const correctedDistance = distance * cos(rayAngle - angle);
-			wallRayInfo.push({ distance: correctedDistance, angle: rayAngle });
+
+			const fishEyeAngleCorrection = cos(rayAngle - angle);
+			const correctedDistance = distance * fishEyeAngleCorrection;
+			zBuffer[i] = correctedDistance;
 
 			const columnHeight = (squareSize * canvasHeight) / correctedDistance;
 			const columnWidth = canvasWidth / rays;
 			const columnX = i * columnWidth;
 
-			// Dibujar pared
-			ctx.fillStyle = 'gray';
-			ctx.fillRect(columnX, middleY - columnHeight / 2, columnWidth, columnHeight);
+			// Dibujar las paredes en negro
+			ctx.fillStyle = 'black';
+			ctx.fillRect(columnX, middleY - columnHeight / 2, columnWidth + 1, columnHeight);
 		}
 
-		// Dibujar enemigo como sprite 3D
-		drawEnemySprite(ctx, wallRayInfo);
+		// Renderizamos el enemigo
+		renderSprite(ctx, zBuffer, rays);
 	}
 
-	function drawEnemySprite(ctx, wallRayInfo) {
-		// Calcular posición relativa del enemigo
-		const relX = enemy.x - playerX;
-		const relY = enemy.y - playerY;
+	function renderSprite(ctx, zBuffer, rays) {
+		// Distancia y ángulo del enemigo
+		const dx = enemy.x - playerX;
+		const dy = enemy.y - playerY;
+		const distance = Math.sqrt(dx * dx + dy * dy);
+		let spriteAngle = Math.atan2(dy, dx);
 
-		// Calcular distancia y ángulo del enemigo
-		const enemyDist = Math.sqrt(relX * relX + relY * relY);
-		const enemyAngle = Math.atan2(relY, relX);
+		// Ajustar ángulo
+		while (spriteAngle - angle > Math.PI) spriteAngle -= 2 * Math.PI;
+		while (spriteAngle - angle < -Math.PI) spriteAngle += 2 * Math.PI;
 
-		// Ajustar ángulo para que esté en el rango del jugador
-		let angleDiff = enemyAngle - angle;
-		while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-		while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-
-		// Solo dibujar si el enemigo está en el campo de visión
+		// Campo de visión
 		const fov = Math.PI / 3;
-		if (Math.abs(angleDiff) < fov / 2 && enemyDist > 0) {
-			// Calcular posición en pantalla
-			const screenX = ((angleDiff + fov / 2) / fov) * canvasWidth;
-			const spriteHeight = (squareSize * canvasHeight) / (enemyDist * cos(angleDiff));
+		if (Math.abs(spriteAngle - angle) > fov / 2) return;
 
-			// Verificar si el enemigo está oculto por una pared
-			let isVisible = true;
-			const rayIndex = Math.floor(screenX / (canvasWidth / wallRayInfo.length));
+		// Pantalla
+		const spriteSize = (canvasHeight / distance) * 50;
+		const spriteX = ((spriteAngle - angle) / fov + 0.5) * canvasWidth - spriteSize / 2;
+		const spriteY = canvasHeight / 2 - spriteSize / 2;
 
-			if (rayIndex >= 0 && rayIndex < wallRayInfo.length) {
-				if (enemyDist > wallRayInfo[rayIndex].distance) {
-					isVisible = false;
-				}
-			}
-
-			if (isVisible) {
-				ctx.fillStyle = enemy.color;
-				ctx.fillRect(
-					screenX - spriteHeight / 4,
-					canvasHeight / 2 - spriteHeight / 2,
-					spriteHeight / 2,
-					spriteHeight
-				);
-			}
+		// Verificar oclusión
+		const spriteColumn = Math.floor(spriteX + spriteSize / 2) / (canvasWidth / rays);
+		if (spriteColumn >= 0 && spriteColumn < rays && distance < zBuffer[Math.floor(spriteColumn)]) {
+			ctx.fillStyle = enemy.color;
+			ctx.fillRect(spriteX, spriteY, spriteSize, spriteSize);
 		}
 	}
 
 	function gameLoop() {
 		const ctx = canvas.getContext('2d');
 		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-		ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
 
 		movePlayer();
 		ray(ctx);
@@ -196,12 +182,4 @@
 </script>
 
 <canvas bind:this={canvas} width={canvasWidth} height={canvasHeight}></canvas>
-<svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup} />
-
-<style>
-	canvas {
-		display: block;
-		margin: 0 auto;
-		background-color: black;
-	}
-</style>
+<svelte:window onkeydown={handleKeydown} onkeyup={handleKeyup} />

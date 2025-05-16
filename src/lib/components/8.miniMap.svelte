@@ -35,21 +35,17 @@
 	const cos = (angle) => Math.cos(angle);
 	const sin = (angle) => Math.sin(angle);
 
-	// Función para dibujar el minimapa
 	function drawMinimap(ctx) {
-		// Configuración del minimapa
 		const minimapSize = 200;
 		const minimapX = canvasWidth - minimapSize - 20;
 		const minimapY = 20;
 		const minimapScale = minimapSize / mapSideSize;
 
-		// Fondo del minimapa
 		ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
 		ctx.fillRect(minimapX, minimapY, minimapSize, minimapSize);
 		ctx.strokeStyle = 'white';
 		ctx.strokeRect(minimapX, minimapY, minimapSize, minimapSize);
 
-		// Dibujar el mapa en el minimapa
 		ctx.fillStyle = 'white';
 		for (let y = 0; y < map.length; y++) {
 			for (let x = 0; x < map[y].length; x++) {
@@ -91,23 +87,6 @@
 			minimapX + (playerX + cos(angle) * playerRadius * 1.5) * minimapScale,
 			minimapY + (playerY + sin(angle) * playerRadius * 1.5) * minimapScale
 		);
-		ctx.stroke();
-	}
-
-	function drawMap(ctx) {
-		for (let y = 0; y < map.length; y++) {
-			for (let x = 0; x < map[y].length; x++) {
-				if (map[y][x] === 1) {
-					ctx.fillRect(squareSize * x, squareSize * y, squareSize, squareSize);
-				}
-				ctx.strokeRect(squareSize * x, squareSize * y, squareSize, squareSize);
-			}
-		}
-	}
-
-	function drawPlayer(ctx) {
-		ctx.beginPath();
-		ctx.arc(playerX, playerY, playerRadius, 0, 2 * Math.PI);
 		ctx.stroke();
 	}
 
@@ -205,8 +184,6 @@
 
 		movePlayer();
 		ray(ctx);
-
-		// Dibujar el minimapa
 		drawMinimap(ctx);
 
 		requestAnimationFrame(gameLoop);
