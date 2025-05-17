@@ -35,61 +35,6 @@
 	const cos = (angle) => Math.cos(angle);
 	const sin = (angle) => Math.sin(angle);
 
-	function drawMinimap(ctx) {
-		const minimapSize = 200;
-		const minimapX = canvasWidth - minimapSize - 20;
-		const minimapY = 20;
-		const minimapScale = minimapSize / mapSideSize;
-
-		ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-		ctx.fillRect(minimapX, minimapY, minimapSize, minimapSize);
-		ctx.strokeStyle = 'white';
-		ctx.strokeRect(minimapX, minimapY, minimapSize, minimapSize);
-
-		ctx.fillStyle = 'white';
-		for (let y = 0; y < map.length; y++) {
-			for (let x = 0; x < map[y].length; x++) {
-				if (map[y][x] === 1) {
-					ctx.fillRect(
-						minimapX + x * squareSize * minimapScale,
-						minimapY + y * squareSize * minimapScale,
-						squareSize * minimapScale,
-						squareSize * minimapScale
-					);
-				}
-				ctx.strokeRect(
-					minimapX + x * squareSize * minimapScale,
-					minimapY + y * squareSize * minimapScale,
-					squareSize * minimapScale,
-					squareSize * minimapScale
-				);
-			}
-		}
-
-		// Dibujar al jugador en el minimapa
-		ctx.fillStyle = 'red';
-		ctx.beginPath();
-		ctx.arc(
-			minimapX + playerX * minimapScale,
-			minimapY + playerY * minimapScale,
-			playerRadius * minimapScale,
-			0,
-			2 * Math.PI
-		);
-		ctx.fill();
-
-		// Dibujar la dirección del jugador
-		ctx.strokeStyle = 'yellow';
-		ctx.lineWidth = 2;
-		ctx.beginPath();
-		ctx.moveTo(minimapX + playerX * minimapScale, minimapY + playerY * minimapScale);
-		ctx.lineTo(
-			minimapX + (playerX + cos(angle) * playerRadius * 1.5) * minimapScale,
-			minimapY + (playerY + sin(angle) * playerRadius * 1.5) * minimapScale
-		);
-		ctx.stroke();
-	}
-
 	function detectCollision(x, y) {
 		let cellX = Math.floor(x / squareSize);
 		let cellY = Math.floor(y / squareSize);
@@ -144,6 +89,52 @@
 		}
 	}
 
+	function drawMiniMap(ctx) {
+		const minimapSize = 200;
+		const minimapScale = minimapSize / mapSideSize;
+
+		for (let y = 0; y < map.length; y++) {
+			for (let x = 0; x < map[y].length; x++) {
+				if (map[y][x] === 1) {
+					ctx.fillRect(
+						x * squareSize * minimapScale,
+						y * squareSize * minimapScale,
+						squareSize * minimapScale,
+						squareSize * minimapScale
+					);
+				}
+				ctx.strokeRect(
+					x * squareSize * minimapScale,
+					y * squareSize * minimapScale,
+					squareSize * minimapScale,
+					squareSize * minimapScale
+				);
+			}
+		}
+
+		// Dibujar al jugador en el minimapa
+
+		ctx.beginPath();
+		ctx.arc(
+			playerX * minimapScale,
+			playerY * minimapScale,
+			playerRadius * minimapScale,
+			0,
+			2 * Math.PI
+		);
+		ctx.fill();
+
+		// Dibujar la dirección del jugador
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.moveTo(playerX * minimapScale, playerY * minimapScale);
+		ctx.lineTo(
+			(playerX + cos(angle) * playerRadius * 1.5) * minimapScale,
+			(playerY + sin(angle) * playerRadius * 1.5) * minimapScale
+		);
+		ctx.stroke();
+	}
+
 	function ray(ctx) {
 		const rays = 100;
 		const fov = Math.PI / 3;
@@ -184,8 +175,7 @@
 
 		movePlayer();
 		ray(ctx);
-		drawMinimap(ctx);
-
+		drawMiniMap(ctx);
 		requestAnimationFrame(gameLoop);
 	}
 
@@ -196,9 +186,3 @@
 
 <canvas bind:this={canvas} width={canvasWidth} height={canvasHeight}></canvas>
 <svelte:window onkeydown={handleKeydown} onkeyup={handleKeyup} />
-
-<style>
-	canvas {
-		background-color: black;
-	}
-</style>
