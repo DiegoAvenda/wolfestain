@@ -146,9 +146,7 @@
 		let spriteAngle = Math.atan2(dy, dx);
 
 		// Ajustar ángulo
-		while (spriteAngle - angle > Math.PI) spriteAngle -= 2 * Math.PI;
-		while (spriteAngle - angle < -Math.PI) spriteAngle += 2 * Math.PI;
-
+		spriteAngle = ((spriteAngle - angle + 3 * Math.PI) % (2 * Math.PI)) - Math.PI + angle;
 		// Campo de visión
 		const fov = Math.PI / 3;
 		if (Math.abs(spriteAngle - angle) > fov / 2) return;

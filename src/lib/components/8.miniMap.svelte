@@ -125,7 +125,6 @@
 		ctx.fill();
 
 		// Dibujar la dirección del jugador
-		ctx.lineWidth = 2;
 		ctx.beginPath();
 		ctx.moveTo(playerX * minimapScale, playerY * minimapScale);
 		ctx.lineTo(

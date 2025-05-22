@@ -11,6 +11,8 @@
 	const playerRadius = 50;
 	let angle = $state(0);
 	const velocity = 3;
+	const fov = Math.PI / 3;
+	const middleY = canvasHeight / 2;
 
 	let keysPressed = $state({
 		ArrowRight: false,
@@ -34,6 +36,48 @@
 
 	const cos = (angle) => Math.cos(angle);
 	const sin = (angle) => Math.sin(angle);
+
+	function drawMiniMap(ctx) {
+		const miniMapSize = 200;
+		const miniMapScale = miniMapSize / mapSideSize;
+
+		for (let y = 0; y < map.length; y++) {
+			for (let x = 0; x < map[y].length; x++) {
+				if (map[y][x] === 1) {
+					ctx.fillRect(
+						squareSize * x * miniMapScale,
+						squareSize * y * miniMapScale,
+						squareSize * miniMapScale,
+						squareSize * miniMapScale
+					);
+				}
+				ctx.strokeRect(
+					squareSize * x * miniMapScale,
+					squareSize * y * miniMapScale,
+					squareSize * miniMapScale,
+					squareSize * miniMapScale
+				);
+			}
+		}
+
+		ctx.beginPath();
+		ctx.arc(
+			playerX * miniMapScale,
+			playerY * miniMapScale,
+			playerRadius * miniMapScale,
+			0,
+			2 * Math.PI
+		);
+		ctx.stroke();
+
+		ctx.beginPath();
+		ctx.moveTo(playerX * miniMapScale, playerY * miniMapScale);
+		ctx.lineTo(
+			(playerX + playerRadius * 2 * cos(angle)) * miniMapScale,
+			(playerY + playerRadius * 2 * sin(angle)) * miniMapScale
+		);
+		ctx.stroke();
+	}
 
 	function detectCollision(x, y) {
 		let cellX = Math.floor(x / squareSize);
@@ -89,12 +133,24 @@
 		}
 	}
 
+	function enemy(ctx) {
+		const enemyX = 400;
+		const enemyY = 400;
+		const dx = enemyX - playerX;
+		const dy = enemyY - playerY;
+		const enemyDistance = Math.sqrt(dx * dx + dy * dy);
+		const enemyAngle = Math.atan2(dy, dx);
+		const enemySize = (squareSize * canvasHeight) / enemyDistance;
+		const angleDifference = enemyAngle - angle;
+		const spriteX = (angleDifference / fov + 0.5) * canvasWidth;
+		const spriteY = middleY - enemySize / 2;
+
+		ctx.fillRect(spriteX, spriteY, enemySize, enemySize);
+	}
+
 	function ray(ctx) {
 		const rays = 100;
-		const fov = Math.PI / 3;
 		const rayStep = fov / rays;
-
-		const middleY = canvasHeight / 2;
 
 		for (let i = 0; i < rays; i++) {
 			let rayAngle = angle - fov / 2 + i * rayStep;
@@ -119,6 +175,8 @@
 			const columnX = i * columnWidth;
 
 			ctx.fillRect(columnX, middleY - columnHeight / 2, columnWidth, columnHeight);
+
+			enemy(ctx);
 		}
 	}
 
@@ -129,6 +187,7 @@
 
 		movePlayer();
 		ray(ctx);
+		drawMiniMap(ctx);
 
 		requestAnimationFrame(gameLoop);
 	}
@@ -136,18 +195,7 @@
 	onMount(() => {
 		gameLoop();
 	});
-
-	const distancia = 50;
-	const anguloRayo = 0.5;
-	const angulo = 0;
-	const coseno = cos(anguloRayo - angulo);
-	const ojoPescado = distancia * coseno;
 </script>
 
-<p>ojoPescado: {ojoPescado}</p>
-<p>coseno: {coseno}</p>
-<p>distancia: {distancia}</p>
-<p>angulo rayo: {anguloRayo}</p>
-<p>angulo: {angulo}</p>
 <canvas bind:this={canvas} width={canvasWidth} height={canvasHeight}></canvas>
 <svelte:window onkeydown={handleKeydown} onkeyup={handleKeyup} />
