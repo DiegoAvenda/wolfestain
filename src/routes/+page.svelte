@@ -1,8 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
-	import { browser } from '$app/environment';
 
 	let canvas;
+	let myImage;
 	const mapSideSize = 600;
 	const canvasWidth = mapSideSize;
 	const canvasHeight = mapSideSize;
@@ -14,6 +14,7 @@
 	const velocity = 3;
 	const fov = Math.PI / 3;
 	const middleY = canvasHeight / 2;
+	const rays = 100;
 
 	let keysPressed = $state({
 		ArrowRight: false,
@@ -37,9 +38,6 @@
 
 	const cos = (angle) => Math.cos(angle);
 	const sin = (angle) => Math.sin(angle);
-
-	// Declarar la imagen pero solo inicializarla en el cliente
-	let enemyImage = null;
 
 	function drawMiniMap(ctx) {
 		const miniMapSize = 200;
@@ -137,7 +135,7 @@
 		}
 	}
 
-	function enemy(ctx) {
+	function enemy(ctx, wallDistancePerRay) {
 		const enemyX = 400;
 		const enemyY = 400;
 		const dx = enemyX - playerX;
@@ -149,20 +147,15 @@
 		const spriteX = (angleDifference / fov + 0.5) * canvasWidth;
 		const spriteY = middleY - enemySize / 2;
 
-		// Solo intentar dibujar la imagen si existe y está completa
-		if (enemyImage && enemyImage.complete) {
-			ctx.drawImage(enemyImage, spriteX, spriteY, enemySize, enemySize);
-		} else {
-			// Fallback: dibujar un rectángulo
-			ctx.fillStyle = 'red';
-			ctx.fillRect(spriteX, spriteY, enemySize, enemySize);
-			ctx.fillStyle = 'black'; // Restaurar color por defecto
+		const spriteColumn = (spriteX + enemySize / 2) / (canvasWidth / rays);
+		if (wallDistancePerRay[Math.floor(spriteColumn)] > enemyDistance) {
+			ctx.drawImage(myImage, spriteX, spriteY, enemySize, enemySize);
 		}
 	}
 
 	function ray(ctx) {
-		const rays = 100;
 		const rayStep = fov / rays;
+		const wallDistancePerRay = [];
 
 		for (let i = 0; i < rays; i++) {
 			let rayAngle = angle - fov / 2 + i * rayStep;
@@ -181,20 +174,17 @@
 				}
 			}
 			const correctedDistance = distance * cos(rayAngle - angle);
-
+			wallDistancePerRay[i] = correctedDistance;
 			const columnHeight = (squareSize * canvasHeight) / correctedDistance;
 			const columnWidth = canvasWidth / rays;
 			const columnX = i * columnWidth;
 
 			ctx.fillRect(columnX, middleY - columnHeight / 2, columnWidth, columnHeight);
-
-			enemy(ctx);
 		}
+		enemy(ctx, wallDistancePerRay);
 	}
 
 	function gameLoop() {
-		if (!canvas) return;
-
 		const ctx = canvas.getContext('2d');
 		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 		ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
@@ -207,15 +197,9 @@
 	}
 
 	onMount(() => {
-		// Solo ejecutar en el cliente
-		if (browser) {
-			// Inicializar la imagen del enemigo
-			enemyImage = new Image();
-			enemyImage.src = '/enemy.png';
-
-			// Iniciar el game loop
-			gameLoop();
-		}
+		myImage = new Image();
+		myImage.src = '/enemy.png';
+		gameLoop();
 	});
 </script>
 

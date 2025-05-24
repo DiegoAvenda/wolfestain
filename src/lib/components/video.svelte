@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 
 	let canvas;
+	let myImage;
 	const mapSideSize = 600;
 	const canvasWidth = mapSideSize;
 	const canvasHeight = mapSideSize;
@@ -13,6 +14,7 @@
 	const velocity = 3;
 	const fov = Math.PI / 3;
 	const middleY = canvasHeight / 2;
+	const rays = 100;
 
 	let keysPressed = $state({
 		ArrowRight: false,
@@ -133,7 +135,7 @@
 		}
 	}
 
-	function enemy(ctx) {
+	function enemy(ctx, wallDistancePerRay) {
 		const enemyX = 400;
 		const enemyY = 400;
 		const dx = enemyX - playerX;
@@ -145,12 +147,15 @@
 		const spriteX = (angleDifference / fov + 0.5) * canvasWidth;
 		const spriteY = middleY - enemySize / 2;
 
-		ctx.fillRect(spriteX, spriteY, enemySize, enemySize);
+		const spriteColumn = (spriteX + enemySize / 2) / (canvasWidth / rays);
+		if (wallDistancePerRay[Math.floor(spriteColumn)] > enemyDistance) {
+			ctx.drawImage(myImage, spriteX, spriteY, enemySize, enemySize);
+		}
 	}
 
 	function ray(ctx) {
-		const rays = 100;
 		const rayStep = fov / rays;
+		const wallDistancePerRay = [];
 
 		for (let i = 0; i < rays; i++) {
 			let rayAngle = angle - fov / 2 + i * rayStep;
@@ -169,15 +174,14 @@
 				}
 			}
 			const correctedDistance = distance * cos(rayAngle - angle);
-
+			wallDistancePerRay[i] = correctedDistance;
 			const columnHeight = (squareSize * canvasHeight) / correctedDistance;
 			const columnWidth = canvasWidth / rays;
 			const columnX = i * columnWidth;
 
 			ctx.fillRect(columnX, middleY - columnHeight / 2, columnWidth, columnHeight);
-
-			enemy(ctx);
 		}
+		enemy(ctx, wallDistancePerRay);
 	}
 
 	function gameLoop() {
@@ -193,6 +197,8 @@
 	}
 
 	onMount(() => {
+		myImage = new Image();
+		myImage.src = '/enemy.png';
 		gameLoop();
 	});
 </script>
