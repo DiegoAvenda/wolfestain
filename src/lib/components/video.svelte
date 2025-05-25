@@ -15,6 +15,8 @@
 	const fov = Math.PI / 3;
 	const middleY = canvasHeight / 2;
 	const rays = 100;
+	let enemyX = 400;
+	let enemyY = 400;
 
 	let keysPressed = $state({
 		ArrowRight: false,
@@ -135,9 +137,19 @@
 		}
 	}
 
+	function moveEnemy(ctx) {
+		const enemyVelocity = 2;
+		const dx = playerX - enemyX;
+		const dy = playerY - enemyY;
+		const playerDistance = Math.sqrt(dx * dx + dy * dy);
+
+		if (playerRadius + 10 < playerDistance) {
+			enemyX += (dx / playerDistance) * enemyVelocity;
+			enemyY += (dy / playerDistance) * enemyVelocity;
+		}
+	}
+
 	function enemy(ctx, wallDistancePerRay) {
-		const enemyX = 400;
-		const enemyY = 400;
 		const dx = enemyX - playerX;
 		const dy = enemyY - playerY;
 		const enemyDistance = Math.sqrt(dx * dx + dy * dy);
@@ -190,6 +202,7 @@
 		ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
 
 		movePlayer();
+		moveEnemy(ctx);
 		ray(ctx);
 		drawMiniMap(ctx);
 
