@@ -22,6 +22,8 @@
 	let spriteHeigth = 129;
 	let frameX = 0;
 	let frameY = 1; // fila del sprite, ajusta según tu sprite sheet
+	let lastFrameTime = 0; // afuera de moveEnemy
+	const frameRate = 200;
 	const spriteColumns = 3; // columnas del sprite sheet
 
 	let keysPressed = $state({
@@ -153,8 +155,13 @@
 			enemyX += (dx / playerDistance) * enemyVelocity;
 			enemyY += (dy / playerDistance) * enemyVelocity;
 			//animate
-			if (frameX < spriteColumns) frameX++;
-			else frameX = 0;
+			const currentTime = performance.now();
+			if (currentTime - lastFrameTime >= frameRate) {
+				if (frameX < spriteColumns) frameX++;
+				else frameX = 0;
+
+				lastFrameTime = currentTime;
+			}
 		}
 	}
 
