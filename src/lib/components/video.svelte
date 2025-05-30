@@ -3,6 +3,7 @@
 
 	let canvas;
 	let myImage;
+	let playerPistol;
 	const mapSideSize = 600;
 	const canvasWidth = mapSideSize;
 	const canvasHeight = mapSideSize;
@@ -17,6 +18,15 @@
 	const rays = 100;
 	let enemyX = 400;
 	let enemyY = 400;
+
+	const spriteWidth = 129;
+	const spriteHeight = 129;
+	let frameX = 0;
+	const frameY = 1;
+	const spriteColumns = 4;
+
+	let gameFrame = 0;
+	const staggerFrame = 5;
 
 	let keysPressed = $state({
 		ArrowRight: false,
@@ -146,10 +156,29 @@
 		if (playerRadius + 10 < playerDistance) {
 			enemyX += (dx / playerDistance) * enemyVelocity;
 			enemyY += (dy / playerDistance) * enemyVelocity;
+			if (gameFrame % staggerFrame == 0) {
+				frameX = (frameX + 1) % spriteColumns;
+			}
 		}
+		gameFrame++;
+	}
+
+	function drawPlayerPistol(ctx) {
+		playerPistol = new Image();
+		playerPistol.src = '/pistol.webp';
+		const pistolImageSize = 128 * 2;
+		ctx.drawImage(
+			playerPistol,
+			canvasWidth / 2 - pistolImageSize / 2,
+			canvasHeight - pistolImageSize,
+			pistolImageSize,
+			pistolImageSize
+		);
 	}
 
 	function enemy(ctx, wallDistancePerRay) {
+		myImage = new Image();
+		myImage.src = '/dog.png';
 		const dx = enemyX - playerX;
 		const dy = enemyY - playerY;
 		const enemyDistance = Math.sqrt(dx * dx + dy * dy);
@@ -161,7 +190,17 @@
 
 		const spriteColumn = (spriteX + enemySize / 2) / (canvasWidth / rays);
 		if (wallDistancePerRay[Math.floor(spriteColumn)] > enemyDistance) {
-			ctx.drawImage(myImage, spriteX, spriteY, enemySize, enemySize);
+			ctx.drawImage(
+				myImage,
+				frameX * spriteWidth,
+				frameY * spriteHeight,
+				spriteWidth,
+				spriteHeight,
+				spriteX,
+				spriteY,
+				enemySize,
+				enemySize
+			);
 		}
 	}
 
@@ -205,13 +244,12 @@
 		moveEnemy(ctx);
 		ray(ctx);
 		drawMiniMap(ctx);
+		drawPlayerPistol(ctx);
 
 		requestAnimationFrame(gameLoop);
 	}
 
 	onMount(() => {
-		myImage = new Image();
-		myImage.src = '/enemy.png';
 		gameLoop();
 	});
 </script>

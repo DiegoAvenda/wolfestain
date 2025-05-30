@@ -18,13 +18,13 @@
 	let enemyX = 400;
 	let enemyY = 400;
 
-	let spriteWidth = 129;
-	let spriteHeigth = 129;
+	const spriteWidth = 129;
+	const spriteHeight = 129;
 	let frameX = 0;
-	let frameY = 1; // fila del sprite, ajusta según tu sprite sheet
-	let lastFrameTime = 0; // afuera de moveEnemy
-	const frameRate = 200;
-	const spriteColumns = 3; // columnas del sprite sheet
+	const frameY = 1;
+	const spriteColumns = 4;
+	let gameFrame = 0;
+	const staggerFrames = 5;
 
 	let keysPressed = $state({
 		ArrowRight: false,
@@ -154,37 +154,34 @@
 		if (playerRadius + 10 < playerDistance) {
 			enemyX += (dx / playerDistance) * enemyVelocity;
 			enemyY += (dy / playerDistance) * enemyVelocity;
-			//animate
-			const currentTime = performance.now();
-			if (currentTime - lastFrameTime >= frameRate) {
-				if (frameX < spriteColumns) frameX++;
-				else frameX = 0;
 
-				lastFrameTime = currentTime;
+			if (gameFrame % staggerFrames == 0) {
+				frameX = (frameX + 1) % spriteColumns;
 			}
 		}
+		gameFrame++;
 	}
 
 	function enemy(ctx, wallDistancePerRay) {
+		myImage = new Image();
+		myImage.src = '/dog.png';
 		const dx = enemyX - playerX;
 		const dy = enemyY - playerY;
 		const enemyDistance = Math.sqrt(dx * dx + dy * dy);
 		const enemyAngle = Math.atan2(dy, dx);
-
-		let angleDifference = enemyAngle - angle;
-
 		const enemySize = (squareSize * canvasHeight) / enemyDistance;
-		const spriteX = (angleDifference / fov + 0.5) * canvasWidth - enemySize / 2;
+		const angleDifference = enemyAngle - angle;
+		const spriteX = (angleDifference / fov + 0.5) * canvasWidth;
 		const spriteY = middleY - enemySize / 2;
 
-		const spriteColumn = Math.floor((spriteX + enemySize / 2) / (canvasWidth / rays));
-		if (wallDistancePerRay[spriteColumn] > enemyDistance) {
+		const spriteColumn = (spriteX + enemySize / 2) / (canvasWidth / rays);
+		if (wallDistancePerRay[Math.floor(spriteColumn)] > enemyDistance) {
 			ctx.drawImage(
 				myImage,
 				frameX * spriteWidth,
-				frameY * spriteHeigth,
+				frameY * spriteHeight,
 				spriteWidth,
-				spriteHeigth,
+				spriteHeight,
 				spriteX,
 				spriteY,
 				enemySize,
@@ -238,8 +235,6 @@
 	}
 
 	onMount(() => {
-		myImage = new Image();
-		myImage.src = '/dog.png';
 		gameLoop();
 	});
 </script>
