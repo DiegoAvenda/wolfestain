@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 
 	let canvas;
-	let myImage;
-	let playerPistol;
+	let enemyImage;
+	let playerImage;
 	const mapSideSize = 600;
 	const canvasWidth = mapSideSize;
 	const canvasHeight = mapSideSize;
@@ -19,11 +19,11 @@
 	let enemyX = 400;
 	let enemyY = 400;
 
-	const spriteWidth = 129;
-	const spriteHeight = 129;
-	let frameX = 0;
-	const frameY = 1;
-	const spriteColumns = 4;
+	const enemySpriteWidth = 71;
+	const enemySpriteHeight = 66;
+	let enemyFrameX = 0;
+	const enemyFrameY = 0;
+	const enemySpriteColumns = 4;
 
 	let gameFrame = 0;
 	const staggerFrame = 5;
@@ -108,6 +108,9 @@
 		if (event.key in keysPressed) {
 			keysPressed[event.key] = true;
 		}
+		if (event.key === 'f') {
+			firePlayerWeapon();
+		}
 	}
 
 	function handleKeyup(event) {
@@ -157,47 +160,65 @@
 			enemyX += (dx / playerDistance) * enemyVelocity;
 			enemyY += (dy / playerDistance) * enemyVelocity;
 			if (gameFrame % staggerFrame == 0) {
-				frameX = (frameX + 1) % spriteColumns;
+				enemyFrameX = (enemyFrameX + 1) % enemySpriteColumns;
 			}
 		}
 		gameFrame++;
 	}
 
-	function drawPlayerPistol(ctx) {
-		playerPistol = new Image();
-		playerPistol.src = '/pistol.webp';
-		const pistolImageSize = 128 * 2;
+	const playerSpriteWidth = 204;
+	const playerSpriteHeight = 216;
+	let playerSpriteX = 0;
+	const playerSpriteY = 0;
+
+	let isFiring = false;
+	const playerSpriteColumns = 3;
+
+	function firePlayerWeapon() {
+		isFiring = true;
+		if (playerSpriteX <= playerSpriteColumns) {
+			playerSpriteX++;
+		}
+	}
+
+	function drawPlayer(ctx) {
+		playerImage = new Image();
+		playerImage.src = '/weapon.png';
 		ctx.drawImage(
-			playerPistol,
-			canvasWidth / 2 - pistolImageSize / 2,
-			canvasHeight - pistolImageSize,
-			pistolImageSize,
-			pistolImageSize
+			playerImage,
+			playerSpriteX * playerSpriteWidth,
+			playerSpriteY,
+			playerSpriteWidth,
+			playerSpriteHeight,
+			canvasWidth / 2 - playerSpriteWidth / 2,
+			canvasHeight - playerSpriteHeight,
+			playerSpriteWidth,
+			playerSpriteHeight
 		);
 	}
 
 	function enemy(ctx, wallDistancePerRay) {
-		myImage = new Image();
-		myImage.src = '/dog.png';
+		enemyImage = new Image();
+		enemyImage.src = '/boss.png';
 		const dx = enemyX - playerX;
 		const dy = enemyY - playerY;
 		const enemyDistance = Math.sqrt(dx * dx + dy * dy);
 		const enemyAngle = Math.atan2(dy, dx);
 		const enemySize = (squareSize * canvasHeight) / enemyDistance;
 		const angleDifference = enemyAngle - angle;
-		const spriteX = (angleDifference / fov + 0.5) * canvasWidth;
-		const spriteY = middleY - enemySize / 2;
+		const enemySpriteX = (angleDifference / fov + 0.5) * canvasWidth;
+		const enemySpriteY = middleY - enemySize / 2;
 
-		const spriteColumn = (spriteX + enemySize / 2) / (canvasWidth / rays);
+		const spriteColumn = (enemySpriteX + enemySize / 2) / (canvasWidth / rays);
 		if (wallDistancePerRay[Math.floor(spriteColumn)] > enemyDistance) {
 			ctx.drawImage(
-				myImage,
-				frameX * spriteWidth,
-				frameY * spriteHeight,
-				spriteWidth,
-				spriteHeight,
-				spriteX,
-				spriteY,
+				enemyImage,
+				enemyFrameX * enemySpriteWidth,
+				enemyFrameY * enemySpriteHeight,
+				enemySpriteWidth,
+				enemySpriteHeight,
+				enemySpriteX,
+				enemySpriteY,
 				enemySize,
 				enemySize
 			);
@@ -244,7 +265,7 @@
 		moveEnemy(ctx);
 		ray(ctx);
 		drawMiniMap(ctx);
-		drawPlayerPistol(ctx);
+		drawPlayer(ctx);
 
 		requestAnimationFrame(gameLoop);
 	}
