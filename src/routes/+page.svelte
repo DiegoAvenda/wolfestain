@@ -22,7 +22,7 @@
 	const enemySpriteWidth = 71;
 	const enemySpriteHeight = 66;
 	let enemyFrameX = 0;
-	const enemyFrameY = 0;
+	let enemyFrameY = 0;
 	const enemySpriteColumns = 4;
 
 	let gameFrame = 0;
@@ -157,15 +157,32 @@
 		const playerDistance = Math.sqrt(dx * dx + dy * dy);
 
 		if (playerRadius + 10 < playerDistance) {
-			enemyX += (dx / playerDistance) * enemyVelocity;
-			enemyY += (dy / playerDistance) * enemyVelocity;
-			if (gameFrame % staggerFrame == 0) {
-				enemyFrameX = (enemyFrameX + 1) % enemySpriteColumns;
+			if (!isEnemyDead) {
+				enemyX += (dx / playerDistance) * enemyVelocity;
+				enemyY += (dy / playerDistance) * enemyVelocity;
+				if (gameFrame % staggerFrame == 0) {
+					enemyFrameX = (enemyFrameX + 1) % enemySpriteColumns;
+				}
 			}
 		}
+
+		if (isEnemyGettingShot) {
+			enemyFrameY = 2;
+			if (gameFrame % dyingAnimationSpeed === 0) {
+				enemyFrameX++;
+
+				if (enemyFrameX >= enemySpriteColumns) {
+					enemyFrameX = 3;
+					isEnemyGettingShot = false;
+					isEnemyDead = true;
+				}
+			}
+		}
+
 		gameFrame++;
 	}
-
+	let isEnemyDead = false;
+	const dyingAnimationSpeed = 3;
 	const playerSpriteWidth = 204;
 	const playerSpriteHeight = 216;
 	let playerSpriteX = 0;
@@ -173,21 +190,11 @@
 
 	let isFiring = false;
 	const playerSpriteColumns = 3;
+	const fireAnimationSpeed = 3; // Velocidad de la animación (menos = más rápido)
+
+	let isEnemyGettingShot = false;
 
 	function drawPlayer(ctx) {
-		const fireAnimationSpeed = 3; // Velocidad de la animación (menos = más rápido)
-
-		if (isFiring) {
-			if (gameFrame % fireAnimationSpeed === 0) {
-				playerSpriteX++;
-
-				if (playerSpriteX >= playerSpriteColumns) {
-					playerSpriteX = 0;
-					isFiring = false;
-				}
-			}
-		}
-
 		ctx.drawImage(
 			playerImage,
 			playerSpriteX * playerSpriteWidth,
@@ -210,6 +217,19 @@
 		const angleDifference = enemyAngle - angle;
 		const enemySpriteX = (angleDifference / fov + 0.5) * canvasWidth;
 		const enemySpriteY = middleY - enemySize / 2;
+
+		if (isFiring) {
+			if (gameFrame % fireAnimationSpeed === 0) {
+				playerSpriteX++;
+
+				if (playerSpriteX >= playerSpriteColumns) {
+					playerSpriteX = 0;
+					isFiring = false;
+
+					if (angleDifference < fov / 32) isEnemyGettingShot = true;
+				}
+			}
+		}
 
 		const spriteColumn = (enemySpriteX + enemySize / 2) / (canvasWidth / rays);
 		if (wallDistancePerRay[Math.floor(spriteColumn)] > enemyDistance) {
