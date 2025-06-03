@@ -2,65 +2,34 @@
 	import { onMount } from 'svelte';
 
 	// ========================================
-	// VARIABLES DE ESTADO Y CONFIGURACIÓN
+	// CONSTANTES Y CONFIGURACIÓN
 	// ========================================
-
-	// Canvas y configuración del mapa
-	let canvas;
 	const MAP_SIZE = 600;
 	const CANVAS_WIDTH = MAP_SIZE;
 	const CANVAS_HEIGHT = MAP_SIZE;
 	const SQUARE_SIZE = MAP_SIZE / 10;
 	const MIDDLE_Y = CANVAS_HEIGHT / 2;
-
-	// Configuración del jugador
-	let playerX = $state(CANVAS_WIDTH / 2);
-	let playerY = $state(CANVAS_HEIGHT / 2 + 60);
 	const PLAYER_RADIUS = 50;
-	let angle = $state(0);
 	const VELOCITY = 3;
-	let health = $state(100);
-
-	// Configuración del raycasting
 	const FOV = Math.PI / 3;
 	const RAYS = 100;
-
-	// Configuración del enemigo
-	let enemyX = 400;
-	let enemyY = 400;
-
-	// Estados del enemigo
-	const ENEMY_STATES = {
-		WALKING: 'walking',
-		ATTACKING: 'attacking',
-		TAKING_DAMAGE: 'taking_damage',
-		DEAD: 'dead'
-	};
-	let enemyState = ENEMY_STATES.WALKING;
-
-	// Sprites y animación
-	let enemyImage;
-	let playerImage;
-	let gameFrame = 0;
 	const STAGGER_FRAME = 6;
 
-	// Configuración de sprites del enemigo
-	const ENEMY_SPRITE_WIDTH = 71;
-	const ENEMY_SPRITE_HEIGHT = 66;
-	let enemyFrameX = 0;
-	let enemyFrameY = 0;
-	const ENEMY_SPRITE_COLUMNS = 4;
-	const ENEMY_ATTACKING_SPRITE_COLUMNS = 2;
-
-	// Configuración de sprites del jugador
-	let playerFrameX = 0;
-	const PLAYER_FRAME_Y = 0;
-	const PLAYER_SPRITE_WIDTH = 204;
-	const PLAYER_SPRITE_HEIGHT = 216;
-	const PLAYER_SPRITE_COLUMNS = 3;
-	let isPlayerFiring = false;
-
-	// Controles
+	// ========================================
+	// ESTADOS
+	// ========================================
+	let canvas;
+	let playerX = $state(CANVAS_WIDTH / 2);
+	let playerY = $state(CANVAS_HEIGHT / 2 + 60);
+	let angle = $state(0);
+	let health = $state(100);
+	let enemyX = $state(400);
+	let enemyY = $state(400);
+	let gameFrame = $state(0);
+	let enemyFrameX = $state(0);
+	let enemyFrameY = $state(0);
+	let playerFrameX = $state(0);
+	let isPlayerFiring = $state(false);
 	let keysPressed = $state({
 		ArrowRight: false,
 		ArrowLeft: false,
@@ -68,7 +37,24 @@
 		ArrowDown: false
 	});
 
-	// Mapa del juego
+	// ========================================
+	// CONFIGURACIÓN DE SPRITES
+	// ========================================
+	const ENEMY_SPRITE_WIDTH = 71;
+	const ENEMY_SPRITE_HEIGHT = 66;
+	const ENEMY_SPRITE_COLUMNS = 4;
+	const ENEMY_ATTACKING_SPRITE_COLUMNS = 2;
+	const PLAYER_SPRITE_WIDTH = 204;
+	const PLAYER_SPRITE_HEIGHT = 216;
+	const PLAYER_SPRITE_COLUMNS = 3;
+	const PLAYER_FRAME_Y = 0;
+
+	let enemyImage;
+	let playerImage;
+
+	// ========================================
+	// MAPA
+	// ========================================
 	const map = [
 		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -83,9 +69,59 @@
 	];
 
 	// ========================================
+	// MÁQUINA DE ESTADOS DEL ENEMIGO
+	// ========================================
+	let currentEnemyState = $state('walking');
+
+	const enemyStateHandlers = {
+		walking: () => {
+			const { dx, dy, distance } = getEnemyDistanceAndDirection();
+			const ENEMY_VELOCITY = 2;
+
+			if (distance <= PLAYER_RADIUS + 10) {
+				currentEnemyState = 'attacking';
+				enemyFrameX = 0;
+				return;
+			}
+
+			enemyX += (dx / distance) * ENEMY_VELOCITY;
+			enemyY += (dy / distance) * ENEMY_VELOCITY;
+			enemyFrameY = 0;
+			if (gameFrame % STAGGER_FRAME === 0) {
+				enemyFrameX = (enemyFrameX + 1) % ENEMY_SPRITE_COLUMNS;
+			}
+		},
+		attacking: () => {
+			const { distance } = getEnemyDistanceAndDirection();
+			if (distance > PLAYER_RADIUS + 10) {
+				currentEnemyState = 'walking';
+				enemyFrameX = 0;
+				return;
+			}
+			enemyFrameY = 1;
+			if (gameFrame % (STAGGER_FRAME * 4) === 0) {
+				enemyFrameX = (enemyFrameX + 1) % ENEMY_ATTACKING_SPRITE_COLUMNS;
+			}
+		},
+		taking_damage: () => {
+			enemyFrameY = 2;
+			if (gameFrame % STAGGER_FRAME === 0) {
+				enemyFrameX++;
+				if (enemyFrameX >= ENEMY_SPRITE_COLUMNS) {
+					currentEnemyState = 'dead';
+					enemyFrameX = 3;
+				}
+			}
+		},
+		dead: () => {
+			enemyFrameY = 2;
+			enemyFrameX = 3;
+		}
+	};
+
+	// ========================================
 	// FUNCIONES AUXILIARES
 	// ========================================
-
 	const cos = (angle) => Math.cos(angle);
 	const sin = (angle) => Math.sin(angle);
 
@@ -101,10 +137,16 @@
 		return Math.sqrt(dx * dx + dy * dy);
 	}
 
-	// ========================================
-	// MANEJO DE CONTROLES
-	// ========================================
+	function getEnemyDistanceAndDirection() {
+		const dx = playerX - enemyX;
+		const dy = playerY - enemyY;
+		const distance = calculateDistance(enemyX, enemyY, playerX, playerY);
+		return { dx, dy, distance };
+	}
 
+	// ========================================
+	// CONTROLES
+	// ========================================
 	function handleKeydown(event) {
 		if (event.key in keysPressed) {
 			keysPressed[event.key] = true;
@@ -123,14 +165,9 @@
 	// ========================================
 	// LÓGICA DEL JUGADOR
 	// ========================================
-
 	function updatePlayerRotation() {
-		if (keysPressed.ArrowRight) {
-			angle += 0.1;
-		}
-		if (keysPressed.ArrowLeft) {
-			angle -= 0.1;
-		}
+		if (keysPressed.ArrowRight) angle += 0.1;
+		if (keysPressed.ArrowLeft) angle -= 0.1;
 	}
 
 	function updatePlayerMovement() {
@@ -146,21 +183,11 @@
 			deltaY = -sin(angle) * VELOCITY;
 		}
 
-		// Aplicar movimiento con detección de colisiones
 		const nextX = playerX + deltaX;
 		const nextY = playerY + deltaY;
 
-		if (!detectCollision(nextX, playerY)) {
-			playerX = nextX;
-		}
-		if (!detectCollision(playerX, nextY)) {
-			playerY = nextY;
-		}
-	}
-
-	function movePlayer() {
-		updatePlayerRotation();
-		updatePlayerMovement();
+		if (!detectCollision(nextX, playerY)) playerX = nextX;
+		if (!detectCollision(playerX, nextY)) playerY = nextY;
 	}
 
 	function updatePlayerAnimation() {
@@ -175,7 +202,6 @@
 
 	function drawPlayer(ctx) {
 		const PLAYER_IMAGE_SIZE = 128 * 2;
-
 		ctx.drawImage(
 			playerImage,
 			playerFrameX * PLAYER_SPRITE_WIDTH,
@@ -192,106 +218,15 @@
 	// ========================================
 	// LÓGICA DEL ENEMIGO
 	// ========================================
-
-	function getEnemyDistanceAndDirection() {
-		const dx = playerX - enemyX;
-		const dy = playerY - enemyY;
-		const distance = calculateDistance(enemyX, enemyY, playerX, playerY);
-		return { dx, dy, distance };
-	}
-
-	// Estados individuales del enemigo
-	function updateWalkingState() {
-		const { dx, dy, distance } = getEnemyDistanceAndDirection();
-		const ENEMY_VELOCITY = 2;
-
-		// Verificar si debe cambiar a estado de ataque
-		if (distance <= PLAYER_RADIUS + 10) {
-			enemyState = ENEMY_STATES.ATTACKING;
-			enemyFrameX = 0; // Reiniciar animación
-			return;
-		}
-
-		// Mover hacia el jugador
-		enemyX += (dx / distance) * ENEMY_VELOCITY;
-		enemyY += (dy / distance) * ENEMY_VELOCITY;
-
-		// Actualizar animación de caminar
-		enemyFrameY = 0;
-		if (gameFrame % STAGGER_FRAME === 0) {
-			enemyFrameX = (enemyFrameX + 1) % ENEMY_SPRITE_COLUMNS;
-		}
-	}
-
-	function updateAttackingState() {
-		const { distance } = getEnemyDistanceAndDirection();
-
-		// Verificar si el jugador se alejó
-		if (distance > PLAYER_RADIUS + 10) {
-			enemyState = ENEMY_STATES.WALKING;
-			enemyFrameX = 0; // Reiniciar animación
-			return;
-		}
-
-		// Actualizar animación de ataque
-		enemyFrameY = 1;
-		if (gameFrame % (STAGGER_FRAME * 4) === 0) {
-			enemyFrameX = (enemyFrameX + 1) % ENEMY_ATTACKING_SPRITE_COLUMNS;
-		}
-	}
-
-	function updateTakingDamageState() {
-		// Actualizar animación de recibir daño
-		enemyFrameY = 2;
-		if (gameFrame % STAGGER_FRAME === 0) {
-			enemyFrameX++;
-			if (enemyFrameX >= ENEMY_SPRITE_COLUMNS) {
-				enemyState = ENEMY_STATES.DEAD;
-				enemyFrameX = 3; // Frame final de muerte
-			}
-		}
-	}
-
-	function updateDeadState() {
-		// El enemigo está muerto, no hacer nada
-		// Mantener el frame final de muerte
-		enemyFrameY = 2;
-		enemyFrameX = 3;
-	}
-
-	// Máquina de estados del enemigo
-	function updateEnemyState() {
-		switch (enemyState) {
-			case ENEMY_STATES.WALKING:
-				updateWalkingState();
-				break;
-			case ENEMY_STATES.ATTACKING:
-				updateAttackingState();
-				break;
-			case ENEMY_STATES.TAKING_DAMAGE:
-				updateTakingDamageState();
-				break;
-			case ENEMY_STATES.DEAD:
-				updateDeadState();
-				break;
-		}
-	}
-
-	function moveEnemy() {
-		updateEnemyState();
-		gameFrame++;
-	}
-
-	// Función para hacer que el enemigo reciba daño
 	function damageEnemy() {
-		if (enemyState !== ENEMY_STATES.DEAD) {
-			enemyState = ENEMY_STATES.TAKING_DAMAGE;
-			enemyFrameX = 0; // Reiniciar animación de daño
+		if (currentEnemyState !== 'dead') {
+			currentEnemyState = 'taking_damage';
+			enemyFrameX = 0;
 		}
 	}
 
 	function processPlayerShooting() {
-		if (!isPlayerFiring || enemyState === ENEMY_STATES.DEAD) return;
+		if (!isPlayerFiring || currentEnemyState === 'dead') return;
 
 		const dx = enemyX - playerX;
 		const dy = enemyY - playerY;
@@ -318,9 +253,8 @@
 	}
 
 	// ========================================
-	// SISTEMA DE RAYCASTING
+	// RAYCASTING
 	// ========================================
-
 	function castSingleRay(rayAngle) {
 		let rayX = playerX;
 		let rayY = playerY;
@@ -332,7 +266,7 @@
 			distance += 1;
 		}
 
-		return distance * cos(rayAngle - angle); // Corrección de distancia
+		return distance * cos(rayAngle - angle);
 	}
 
 	function drawWallColumn(ctx, columnIndex, wallDistance) {
@@ -355,7 +289,6 @@
 
 		processPlayerShooting();
 
-		// Solo dibujar si el enemigo está visible (no oculto por paredes)
 		const spriteColumn = Math.floor((enemySpriteX + enemySize / 2) / (CANVAS_WIDTH / RAYS));
 		if (wallDistancePerRay[spriteColumn] > enemyDistance) {
 			drawEnemy(ctx, enemySpriteX, enemySpriteY, enemySize);
@@ -366,28 +299,23 @@
 		const rayStep = FOV / RAYS;
 		const wallDistancePerRay = [];
 
-		// Castear rayos y dibujar paredes
 		for (let i = 0; i < RAYS; i++) {
 			const rayAngle = angle - FOV / 2 + i * rayStep;
 			const wallDistance = castSingleRay(rayAngle);
-
 			wallDistancePerRay[i] = wallDistance;
 			drawWallColumn(ctx, i, wallDistance);
 		}
 
-		// Renderizar enemigo después de las paredes
 		renderEnemy(ctx, wallDistancePerRay);
 	}
 
 	// ========================================
 	// MINIMAPA
 	// ========================================
-
 	function drawMiniMap(ctx) {
 		const MINI_MAP_SIZE = 200;
 		const miniMapScale = MINI_MAP_SIZE / MAP_SIZE;
 
-		// Dibujar celdas del mapa
 		for (let y = 0; y < map.length; y++) {
 			for (let x = 0; x < map[y].length; x++) {
 				const cellX = SQUARE_SIZE * x * miniMapScale;
@@ -401,7 +329,6 @@
 			}
 		}
 
-		// Dibujar jugador
 		ctx.beginPath();
 		ctx.arc(
 			playerX * miniMapScale,
@@ -412,7 +339,6 @@
 		);
 		ctx.stroke();
 
-		// Dibujar dirección del jugador
 		ctx.beginPath();
 		ctx.moveTo(playerX * miniMapScale, playerY * miniMapScale);
 		ctx.lineTo(
@@ -423,47 +349,38 @@
 	}
 
 	// ========================================
-	// BUCLE PRINCIPAL DEL JUEGO
+	// BUCLE PRINCIPAL
 	// ========================================
-
 	function gameLoop() {
 		const ctx = canvas.getContext('2d');
-
-		// Limpiar canvas
 		ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 		ctx.strokeRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-		// Actualizar lógica del juego
-		movePlayer();
-		moveEnemy();
+		updatePlayerRotation();
+		updatePlayerMovement();
+		enemyStateHandlers[currentEnemyState]?.();
 		updatePlayerAnimation();
+		gameFrame++;
 
-		// Renderizar
 		performRaycasting(ctx);
 		drawMiniMap(ctx);
 		drawPlayer(ctx);
 
-		// Continuar el bucle
 		requestAnimationFrame(gameLoop);
 	}
 
 	// ========================================
 	// INICIALIZACIÓN
 	// ========================================
-
 	onMount(() => {
-		// Cargar imágenes
 		playerImage = new Image();
 		playerImage.src = '/weapon.png';
-
 		enemyImage = new Image();
 		enemyImage.src = '/boss.png';
-
-		// Iniciar el juego
 		gameLoop();
 	});
 </script>
 
 <canvas bind:this={canvas} width={CANVAS_WIDTH} height={CANVAS_HEIGHT}></canvas>
 <svelte:window onkeydown={handleKeydown} onkeyup={handleKeyup} />
-<p>Heal {health}</p>
+<p>Health: {health}</p>
