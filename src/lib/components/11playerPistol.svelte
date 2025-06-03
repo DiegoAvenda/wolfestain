@@ -19,10 +19,10 @@
 	let enemyX = 400;
 	let enemyY = 400;
 
-	const enemySpriteWidth = 71;
-	const enemySpriteHeight = 66;
-	let enemyFrameX = 0;
-	const enemyFrameY = 0;
+	const enemyenemySpriteWidth = 71;
+	const enemyenemySpriteHeight = 66;
+	let enemyenemyFrameX = 0;
+	const enemyenemyFrameY = 0;
 	const enemySpriteColumns = 4;
 
 	let gameFrame = 0;
@@ -160,24 +160,24 @@
 			enemyX += (dx / playerDistance) * enemyVelocity;
 			enemyY += (dy / playerDistance) * enemyVelocity;
 			if (gameFrame % staggerFrame == 0) {
-				enemyFrameX = (enemyFrameX + 1) % enemySpriteColumns;
+				enemyenemyFrameX = (enemyenemyFrameX + 1) % enemySpriteColumns;
 			}
 		}
 		gameFrame++;
 	}
 
-	const playerSpriteWidth = 204;
-	const playerSpriteHeight = 216;
-	let playerSpriteX = 0;
-	const playerSpriteY = 0;
+	const playerenemySpriteWidth = 204;
+	const playerenemySpriteHeight = 216;
+	let playerenemySpriteX = 0;
+	const playerenemySpriteY = 0;
 
 	let isFiring = false;
 	const playerSpriteColumns = 3;
 
 	function firePlayerWeapon() {
 		isFiring = true;
-		if (playerSpriteX <= playerSpriteColumns) {
-			playerSpriteX++;
+		if (playerenemySpriteX <= playerSpriteColumns) {
+			playerenemySpriteX++;
 		}
 	}
 
@@ -186,14 +186,14 @@
 		playerImage.src = '/weapon.png';
 		ctx.drawImage(
 			playerImage,
-			playerSpriteX * playerSpriteWidth,
-			playerSpriteY,
-			playerSpriteWidth,
-			playerSpriteHeight,
-			canvasWidth / 2 - playerSpriteWidth / 2,
-			canvasHeight - playerSpriteHeight,
-			playerSpriteWidth,
-			playerSpriteHeight
+			playerenemySpriteX * playerenemySpriteWidth,
+			playerenemySpriteY,
+			playerenemySpriteWidth,
+			playerenemySpriteHeight,
+			canvasWidth / 2 - playerenemySpriteWidth / 2,
+			canvasHeight - playerenemySpriteHeight,
+			playerenemySpriteWidth,
+			playerenemySpriteHeight
 		);
 	}
 
@@ -206,19 +206,19 @@
 		const enemyAngle = Math.atan2(dy, dx);
 		const enemySize = (squareSize * canvasHeight) / enemyDistance;
 		const angleDifference = enemyAngle - angle;
-		const enemySpriteX = (angleDifference / fov + 0.5) * canvasWidth;
-		const enemySpriteY = middleY - enemySize / 2;
+		const enemyenemySpriteX = (angleDifference / fov + 0.5) * canvasWidth;
+		const enemyenemySpriteY = middleY - enemySize / 2;
 
-		const spriteColumn = (enemySpriteX + enemySize / 2) / (canvasWidth / rays);
+		const spriteColumn = (enemyenemySpriteX + enemySize / 2) / (canvasWidth / rays);
 		if (wallDistancePerRay[Math.floor(spriteColumn)] > enemyDistance) {
 			ctx.drawImage(
 				enemyImage,
-				enemyFrameX * enemySpriteWidth,
-				enemyFrameY * enemySpriteHeight,
-				enemySpriteWidth,
-				enemySpriteHeight,
-				enemySpriteX,
-				enemySpriteY,
+				enemyenemyFrameX * enemyenemySpriteWidth,
+				enemyenemyFrameY * enemyenemySpriteHeight,
+				enemyenemySpriteWidth,
+				enemyenemySpriteHeight,
+				enemyenemySpriteX,
+				enemyenemySpriteY,
 				enemySize,
 				enemySize
 			);

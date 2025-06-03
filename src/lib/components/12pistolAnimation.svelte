@@ -19,10 +19,10 @@
 	let enemyX = 400;
 	let enemyY = 400;
 
-	const enemySpriteWidth = 71;
-	const enemySpriteHeight = 66;
-	let enemyFrameX = 0;
-	let enemyFrameY = 0;
+	const enemyenemySpriteWidth = 71;
+	const enemyenemySpriteHeight = 66;
+	let enemyenemyFrameX = 0;
+	let enemyenemyFrameY = 0;
 	const enemySpriteColumns = 4;
 
 	let gameFrame = 0;
@@ -161,18 +161,18 @@
 				enemyX += (dx / playerDistance) * enemyVelocity;
 				enemyY += (dy / playerDistance) * enemyVelocity;
 				if (gameFrame % staggerFrame == 0) {
-					enemyFrameX = (enemyFrameX + 1) % enemySpriteColumns;
+					enemyenemyFrameX = (enemyenemyFrameX + 1) % enemySpriteColumns;
 				}
 			}
 		}
 
 		if (isEnemyGettingShot) {
-			enemyFrameY = 2;
+			enemyenemyFrameY = 2;
 			if (gameFrame % dyingAnimationSpeed === 0) {
-				enemyFrameX++;
+				enemyenemyFrameX++;
 
-				if (enemyFrameX >= enemySpriteColumns) {
-					enemyFrameX = 3;
+				if (enemyenemyFrameX >= enemySpriteColumns) {
+					enemyenemyFrameX = 3;
 					isEnemyGettingShot = false;
 					isEnemyDead = true;
 				}
@@ -183,10 +183,10 @@
 	}
 	let isEnemyDead = false;
 	const dyingAnimationSpeed = 3;
-	const playerSpriteWidth = 204;
-	const playerSpriteHeight = 216;
-	let playerSpriteX = 0;
-	const playerSpriteY = 0;
+	const playerenemySpriteWidth = 204;
+	const playerenemySpriteHeight = 216;
+	let playerenemySpriteX = 0;
+	const playerenemySpriteY = 0;
 
 	let isFiring = false;
 	const playerSpriteColumns = 3;
@@ -197,14 +197,14 @@
 	function drawPlayer(ctx) {
 		ctx.drawImage(
 			playerImage,
-			playerSpriteX * playerSpriteWidth,
-			playerSpriteY,
-			playerSpriteWidth,
-			playerSpriteHeight,
-			canvasWidth / 2 - playerSpriteWidth / 2,
-			canvasHeight - playerSpriteHeight,
-			playerSpriteWidth,
-			playerSpriteHeight
+			playerenemySpriteX * playerenemySpriteWidth,
+			playerenemySpriteY,
+			playerenemySpriteWidth,
+			playerenemySpriteHeight,
+			canvasWidth / 2 - playerenemySpriteWidth / 2,
+			canvasHeight - playerenemySpriteHeight,
+			playerenemySpriteWidth,
+			playerenemySpriteHeight
 		);
 	}
 
@@ -215,15 +215,15 @@
 		const enemyAngle = Math.atan2(dy, dx);
 		const enemySize = (squareSize * canvasHeight) / enemyDistance;
 		const angleDifference = enemyAngle - angle;
-		const enemySpriteX = (angleDifference / fov + 0.5) * canvasWidth;
-		const enemySpriteY = middleY - enemySize / 2;
+		const enemyenemySpriteX = (angleDifference / fov + 0.5) * canvasWidth;
+		const enemyenemySpriteY = middleY - enemySize / 2;
 
 		if (isFiring) {
 			if (gameFrame % fireAnimationSpeed === 0) {
-				playerSpriteX++;
+				playerenemySpriteX++;
 
-				if (playerSpriteX >= playerSpriteColumns) {
-					playerSpriteX = 0;
+				if (playerenemySpriteX >= playerSpriteColumns) {
+					playerenemySpriteX = 0;
 					isFiring = false;
 
 					if (angleDifference < fov / 32) isEnemyGettingShot = true;
@@ -231,16 +231,16 @@
 			}
 		}
 
-		const spriteColumn = (enemySpriteX + enemySize / 2) / (canvasWidth / rays);
+		const spriteColumn = (enemyenemySpriteX + enemySize / 2) / (canvasWidth / rays);
 		if (wallDistancePerRay[Math.floor(spriteColumn)] > enemyDistance) {
 			ctx.drawImage(
 				enemyImage,
-				enemyFrameX * enemySpriteWidth,
-				enemyFrameY * enemySpriteHeight,
-				enemySpriteWidth,
-				enemySpriteHeight,
-				enemySpriteX,
-				enemySpriteY,
+				enemyenemyFrameX * enemyenemySpriteWidth,
+				enemyenemyFrameY * enemyenemySpriteHeight,
+				enemyenemySpriteWidth,
+				enemyenemySpriteHeight,
+				enemyenemySpriteX,
+				enemyenemySpriteY,
 				enemySize,
 				enemySize
 			);

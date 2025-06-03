@@ -144,12 +144,12 @@
 		const enemyAngle = Math.atan2(dy, dx);
 		const enemySize = (squareSize * canvasHeight) / enemyDistance;
 		const angleDifference = enemyAngle - angle;
-		const spriteX = (angleDifference / fov + 0.5) * canvasWidth;
-		const spriteY = middleY - enemySize / 2;
+		const enemySpriteX = (angleDifference / fov + 0.5) * canvasWidth;
+		const enemySpriteY = middleY - enemySize / 2;
 
-		const spriteColumn = (spriteX + enemySize / 2) / (canvasWidth / rays);
+		const spriteColumn = (enemySpriteX + enemySize / 2) / (canvasWidth / rays);
 		if (wallDistancePerRay[Math.floor(spriteColumn)] > enemyDistance) {
-			ctx.drawImage(myImage, spriteX, spriteY, enemySize, enemySize);
+			ctx.drawImage(myImage, enemySpriteX, enemySpriteY, enemySize, enemySize);
 		}
 	}
 
