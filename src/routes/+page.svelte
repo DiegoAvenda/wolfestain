@@ -71,15 +71,22 @@
 	// ========================================
 	// MÁQUINA DE ESTADOS DEL ENEMIGO
 	// ========================================
-	let currentEnemyState = $state('walking');
+	const enemyStates = {
+		WALKING: 'walking',
+		ATTACKING: 'attacking',
+		TAKING_DAMAGE: 'taking_damage',
+		DEAD: 'dead'
+	};
+
+	let currentEnemyState = $state(enemyStates.WALKING);
 
 	const enemyStateHandlers = {
-		walking: () => {
+		[enemyStates.WALKING]: () => {
 			const { dx, dy, distance } = getEnemyDistanceAndDirection();
 			const ENEMY_VELOCITY = 2;
 
 			if (distance <= PLAYER_RADIUS + 10) {
-				currentEnemyState = 'attacking';
+				currentEnemyState = enemyStates.ATTACKING;
 				enemyFrameX = 0;
 				return;
 			}
@@ -91,29 +98,31 @@
 				enemyFrameX = (enemyFrameX + 1) % ENEMY_SPRITE_COLUMNS;
 			}
 		},
-		attacking: () => {
+		[enemyStates.ATTACKING]: () => {
 			const { distance } = getEnemyDistanceAndDirection();
 			if (distance > PLAYER_RADIUS + 10) {
-				currentEnemyState = 'walking';
+				currentEnemyState = enemyStates.WALKING;
 				enemyFrameX = 0;
 				return;
 			}
 			enemyFrameY = 1;
-			if (gameFrame % (STAGGER_FRAME * 4) === 0) {
+			if (gameFrame % (STAGGER_FRAME * 5) === 0) {
 				enemyFrameX = (enemyFrameX + 1) % ENEMY_ATTACKING_SPRITE_COLUMNS;
+				if ((enemyFrameX = 1)) health -= 10;
+				if (health <= 0) alert('game over');
 			}
 		},
-		taking_damage: () => {
+		[enemyStates.TAKING_DAMAGE]: () => {
 			enemyFrameY = 2;
 			if (gameFrame % STAGGER_FRAME === 0) {
 				enemyFrameX++;
 				if (enemyFrameX >= ENEMY_SPRITE_COLUMNS) {
-					currentEnemyState = 'dead';
+					currentEnemyState = enemyStates.DEAD;
 					enemyFrameX = 3;
 				}
 			}
 		},
-		dead: () => {
+		[enemyStates.DEAD]: () => {
 			enemyFrameY = 2;
 			enemyFrameX = 3;
 		}
@@ -219,14 +228,14 @@
 	// LÓGICA DEL ENEMIGO
 	// ========================================
 	function damageEnemy() {
-		if (currentEnemyState !== 'dead') {
-			currentEnemyState = 'taking_damage';
+		if (currentEnemyState !== enemyStates.DEAD) {
+			currentEnemyState = enemyStates.TAKING_DAMAGE;
 			enemyFrameX = 0;
 		}
 	}
 
 	function processPlayerShooting() {
-		if (!isPlayerFiring || currentEnemyState === 'dead') return;
+		if (!isPlayerFiring || currentEnemyState === enemyStates.DEAD) return;
 
 		const dx = enemyX - playerX;
 		const dy = enemyY - playerY;
