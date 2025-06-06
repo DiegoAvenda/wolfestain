@@ -266,6 +266,7 @@
 			rayX += cos(rayAngle);
 			rayY += sin(rayAngle);
 			distance += 1;
+			if (distance > 10000) break;
 		}
 
 		return distance * cos(rayAngle - angle);
@@ -284,15 +285,40 @@
 		const dy = enemyY - playerY;
 		const enemyDistance = calculateDistance(playerX, playerY, enemyX, enemyY);
 		const enemyAngle = Math.atan2(dy, dx);
+
+		// Normaliza el ángulo de diferencia a -PI ... PI
+		let angleDifference = enemyAngle - angle;
+		while (angleDifference > Math.PI) angleDifference -= 2 * Math.PI;
+		while (angleDifference < -Math.PI) angleDifference += 2 * Math.PI;
+
+		// Si el enemigo está fuera del FOV, no lo dibujes
+		if (Math.abs(angleDifference) > FOV / 2) return;
+
 		const enemySize = (SQUARE_SIZE * CANVAS_HEIGHT) / enemyDistance;
-		const angleDifference = enemyAngle - angle;
 		const enemySpriteX = (angleDifference / FOV + 0.5) * CANVAS_WIDTH;
 		const enemySpriteY = MIDDLE_Y - enemySize / 2;
 
 		processPlayerShooting();
 
-		const spriteColumn = Math.floor((enemySpriteX + enemySize / 2) / (CANVAS_WIDTH / RAYS));
-		if (wallDistancePerRay[spriteColumn] > enemyDistance) {
+		// Verificar múltiples columnas del sprite en lugar de solo una
+		const spriteLeftColumn = Math.floor(enemySpriteX / (CANVAS_WIDTH / RAYS));
+		const spriteRightColumn = Math.floor((enemySpriteX + enemySize) / (CANVAS_WIDTH / RAYS));
+
+		// El enemigo es visible si al menos una parte de él no está ocluida por una pared
+		let isVisible = false;
+
+		for (
+			let col = Math.max(0, spriteLeftColumn);
+			col <= Math.min(wallDistancePerRay.length - 1, spriteRightColumn);
+			col++
+		) {
+			if (wallDistancePerRay[col] > enemyDistance) {
+				isVisible = true;
+				break;
+			}
+		}
+
+		if (isVisible) {
 			drawEnemy(ctx, enemySpriteX, enemySpriteY, enemySize);
 		}
 	}
