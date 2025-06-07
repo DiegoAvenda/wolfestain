@@ -347,16 +347,6 @@
 			(playerY + PLAYER_RADIUS * 2 * sin(angle)) * miniMapScale
 		);
 		ctx.stroke();
-
-		ctx.beginPath();
-		ctx.arc(
-			enemyX * miniMapScale,
-			enemyY * miniMapScale,
-			PLAYER_RADIUS * miniMapScale,
-			0,
-			2 * Math.PI
-		);
-		ctx.stroke();
 	}
 
 	// ========================================
