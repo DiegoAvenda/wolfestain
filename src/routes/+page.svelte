@@ -2,60 +2,165 @@
 	import { onMount } from 'svelte';
 
 	let canvas;
-	let canvasWidth;
-	let canvasHeight;
-	let squareSize;
+	let canvasWidth = $state(0);
+	let canvasHeight = $state(0);
+	let squareSize = $state(0);
+	let playerRadius = $derived(squareSize / 4);
+	let angle = $state(0);
+	const VELOCITY = 3;
 
-	// Room simple 16x16 con un cubo en el centro
+	// Posición del jugador ahora es estado mutable
+	let playerX = $state(0);
+	let playerY = $state(0);
+
+	let keysPressed = $state({
+		ArrowRight: false,
+		ArrowLeft: false,
+		ArrowUp: false,
+		ArrowDown: false
+	});
+
 	const map = [
-		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+		[1, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 	];
+
+	// ========================================
+	// FUNCIONES AUXILIARES
+	// ========================================
+	const cos = (angle) => Math.cos(angle);
+	const sin = (angle) => Math.sin(angle);
+
+	// ========================================
+	// DETECCIÓN DE COLISIONES
+	// ========================================
+	function detectCollision(x, y) {
+		const cellX = Math.floor(x / squareSize);
+		const cellY = Math.floor(y / squareSize);
+		return map[cellY]?.[cellX] === 1;
+	}
+
+	function checkCircleCollision(newX, newY, radius) {
+		// Verificar múltiples puntos alrededor del círculo del jugador
+		const numPoints = 8;
+		for (let i = 0; i < numPoints; i++) {
+			const checkAngle = (i / numPoints) * 2 * Math.PI;
+			const checkX = newX + cos(checkAngle) * radius;
+			const checkY = newY + sin(checkAngle) * radius;
+
+			if (detectCollision(checkX, checkY)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// ========================================
+	// CONTROLES
+	// ========================================
+	function handleKeydown(event) {
+		if (event.key in keysPressed) {
+			keysPressed[event.key] = true;
+		}
+	}
+
+	function handleKeyup(event) {
+		if (event.key in keysPressed) {
+			keysPressed[event.key] = false;
+		}
+	}
 
 	function updateCanvasSize() {
 		canvasWidth = window.innerWidth;
 		canvasHeight = window.innerHeight;
 
-		// Calcular el tamaño de celda para que el mapa cuadrado se ajuste bien
+		// Calcular el tamaño de celda
 		const minDimension = Math.min(canvasWidth, canvasHeight);
 		squareSize = minDimension / map.length;
 
-		// Actualizar el canvas si ya existe
-		if (canvas) {
-			canvas.width = canvasWidth;
-			canvas.height = canvasHeight;
+		if (playerX === 0 && playerY === 0) {
+			playerX = squareSize * 1.5; // Posición inicial en celda libre
+			playerY = squareSize * 1.5;
 		}
+	}
+
+	// ========================================
+	// LÓGICA DEL JUGADOR
+	// ========================================
+	function updatePlayerRotation() {
+		if (keysPressed.ArrowRight) angle += 0.1;
+		if (keysPressed.ArrowLeft) angle -= 0.1;
+	}
+
+	function updatePlayerMovement() {
+		let deltaX = 0;
+		let deltaY = 0;
+
+		if (keysPressed.ArrowUp) {
+			deltaX = cos(angle) * VELOCITY;
+			deltaY = sin(angle) * VELOCITY;
+		}
+		if (keysPressed.ArrowDown) {
+			deltaX = -cos(angle) * VELOCITY;
+			deltaY = -sin(angle) * VELOCITY;
+		}
+
+		// Calcular nueva posición
+		const newX = playerX + deltaX;
+		const newY = playerY + deltaY;
+
+		// Verificar colisión antes de mover
+		if (!checkCircleCollision(newX, newY, playerRadius)) {
+			playerX = newX;
+			playerY = newY;
+		} else {
+			// Intentar movimiento solo en X
+			if (!checkCircleCollision(playerX + deltaX, playerY, playerRadius)) {
+				playerX += deltaX;
+			}
+			// Intentar movimiento solo en Y
+			else if (!checkCircleCollision(playerX, playerY + deltaY, playerRadius)) {
+				playerY += deltaY;
+			}
+			// Si no se puede mover en ninguna dirección, no hacer nada
+		}
+	}
+
+	function drawPlayer(ctx) {
+		// Dibujar el círculo del jugador
+		ctx.strokeStyle = '#FF0000';
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.arc(playerX, playerY, playerRadius, 0, 2 * Math.PI);
+		ctx.stroke();
+
+		// Dibujar la línea de dirección
+		ctx.strokeStyle = '#FF0000';
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.moveTo(playerX, playerY);
+		ctx.lineTo(playerX + playerRadius * 2 * cos(angle), playerY + playerRadius * 2 * sin(angle));
+		ctx.stroke();
 	}
 
 	function generateMap(ctx) {
 		// Configurar estilos
-		ctx.fillStyle = '#8B4513'; // Color café para paredes (más Wolfenstein)
+		ctx.fillStyle = '#8B4513'; // Color café para paredes
 		ctx.strokeStyle = '#654321';
 		ctx.lineWidth = 1;
 
-		// Centrar el mapa en el canvas
-		const mapPixelSize = squareSize * map.length;
-		const offsetX = (canvasWidth - mapPixelSize) / 2;
-		const offsetY = (canvasHeight - mapPixelSize) / 2;
-
 		for (let x = 0; x < map[0].length; x++) {
 			for (let y = 0; y < map.length; y++) {
-				const pixelX = offsetX + squareSize * x;
-				const pixelY = offsetY + squareSize * y;
+				const pixelX = squareSize * x;
+				const pixelY = squareSize * y;
 
 				if (map[y][x] === 1) {
 					ctx.fillRect(pixelX, pixelY, squareSize, squareSize);
@@ -66,8 +171,6 @@
 	}
 
 	function gameLoop() {
-		if (!canvas) return;
-
 		const ctx = canvas.getContext('2d');
 		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -77,12 +180,10 @@
 		ctx.strokeRect(0, 0, canvasWidth, canvasHeight);
 
 		generateMap(ctx);
-
+		updatePlayerRotation();
+		updatePlayerMovement();
+		drawPlayer(ctx);
 		requestAnimationFrame(gameLoop);
-	}
-
-	function handleResize() {
-		updateCanvasSize();
 	}
 
 	onMount(() => {
@@ -90,16 +191,17 @@
 		gameLoop();
 
 		// Escuchar cambios de tamaño de ventana
-		window.addEventListener('resize', handleResize);
+		window.addEventListener('resize', updateCanvasSize);
 
 		// Cleanup function
 		return () => {
-			window.removeEventListener('resize', handleResize);
+			window.removeEventListener('resize', updateCanvasSize);
 		};
 	});
 </script>
 
 <canvas bind:this={canvas} width={canvasWidth} height={canvasHeight}></canvas>
+<svelte:window onkeydown={handleKeydown} onkeyup={handleKeyup} />
 
 <style>
 	:global(body) {
