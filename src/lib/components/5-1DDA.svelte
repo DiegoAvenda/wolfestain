@@ -8,8 +8,6 @@
 	let playerRadius = $derived(squareSize / 4);
 	let angle = $state(0);
 	const VELOCITY = 3;
-	const FOV = Math.PI / 3; // 60° field of view
-	const RAYS = 100;
 
 	// Posición del jugador ahora es estado mutable
 	let playerX = $state(0);
@@ -68,7 +66,7 @@
 	// ========================================
 	// RAYCASTING
 	// ========================================
-	function castRay(rayAngle) {
+	function castRay(startX, startY, rayAngle) {
 		const rayDirX = cos(rayAngle);
 		const rayDirY = sin(rayAngle);
 
@@ -77,8 +75,8 @@
 		const deltaDistY = Math.abs(1 / rayDirY);
 
 		// Posición actual en la grid
-		let mapX = Math.floor(playerX / squareSize);
-		let mapY = Math.floor(playerY / squareSize);
+		let mapX = Math.floor(startX / squareSize);
+		let mapY = Math.floor(startY / squareSize);
 
 		// Dirección del paso y distancia inicial
 		let stepX, stepY;
@@ -86,18 +84,18 @@
 
 		if (rayDirX < 0) {
 			stepX = -1;
-			sideDistX = (playerX / squareSize - mapX) * deltaDistX;
+			sideDistX = (startX / squareSize - mapX) * deltaDistX;
 		} else {
 			stepX = 1;
-			sideDistX = (mapX + 1.0 - playerX / squareSize) * deltaDistX;
+			sideDistX = (mapX + 1.0 - startX / squareSize) * deltaDistX;
 		}
 
 		if (rayDirY < 0) {
 			stepY = -1;
-			sideDistY = (playerY / squareSize - mapY) * deltaDistY;
+			sideDistY = (startY / squareSize - mapY) * deltaDistY;
 		} else {
 			stepY = 1;
-			sideDistY = (mapY + 1.0 - playerY / squareSize) * deltaDistY;
+			sideDistY = (mapY + 1.0 - startY / squareSize) * deltaDistY;
 		}
 
 		// Realizar DDA
@@ -125,14 +123,14 @@
 		// Calcular distancia y punto de intersección
 		let perpWallDist;
 		if (side === 0) {
-			perpWallDist = (mapX - playerX / squareSize + (1 - stepX) / 2) / rayDirX;
+			perpWallDist = (mapX - startX / squareSize + (1 - stepX) / 2) / rayDirX;
 		} else {
-			perpWallDist = (mapY - playerY / squareSize + (1 - stepY) / 2) / rayDirY;
+			perpWallDist = (mapY - startY / squareSize + (1 - stepY) / 2) / rayDirY;
 		}
 
 		// Calcular punto exacto de intersección
-		const hitX = playerX + perpWallDist * rayDirX * squareSize;
-		const hitY = playerY + perpWallDist * rayDirY * squareSize;
+		const hitX = startX + perpWallDist * rayDirX * squareSize;
+		const hitY = startY + perpWallDist * rayDirY * squareSize;
 
 		return {
 			x: hitX,
@@ -140,24 +138,6 @@
 			distance: perpWallDist * squareSize,
 			side: side // 0 = vertical, 1 = horizontal
 		};
-	}
-
-	function performRaycasting(ctx) {
-		const rayStep = FOV / RAYS;
-		//const wallDistancePerRay = [];
-
-		for (let i = 0; i < RAYS; i++) {
-			const rayAngle = angle - FOV / 2 + i * rayStep;
-			const singleRay = castRay(rayAngle);
-			//wallDistancePerRay[i] = wallDistance;
-			//drawWallColumn(ctx, i, wallDistance);
-			ctx.beginPath();
-			ctx.moveTo(playerX, playerY);
-			ctx.lineTo(singleRay.x, singleRay.y);
-			ctx.stroke();
-		}
-
-		//renderEnemy(ctx, wallDistancePerRay);
 	}
 
 	// ========================================
@@ -227,7 +207,7 @@
 		ctx.stroke();
 
 		// Lanzar y dibujar el rayo
-		const rayResult = castRay(angle);
+		const rayResult = castRay(playerX, playerY, angle);
 
 		// Color diferente según el lado golpeado (vertical vs horizontal)
 		ctx.strokeStyle = rayResult.side === 0 ? '#FF6600' : '#FF9900';
@@ -275,7 +255,6 @@
 		generateMap(ctx);
 		updatePlayerRotation();
 		updatePlayerMovement();
-		performRaycasting(ctx);
 		drawPlayer(ctx);
 		requestAnimationFrame(gameLoop);
 	}

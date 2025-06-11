@@ -8,8 +8,6 @@
 	let playerRadius = $derived(squareSize / 4);
 	let angle = $state(0);
 	const VELOCITY = 3;
-	const FOV = Math.PI / 3; // 60° field of view
-	const RAYS = 100;
 
 	// Posición del jugador ahora es estado mutable
 	let playerX = $state(0);
@@ -63,101 +61,6 @@
 			}
 		}
 		return false;
-	}
-
-	// ========================================
-	// RAYCASTING
-	// ========================================
-	function castRay(rayAngle) {
-		const rayDirX = cos(rayAngle);
-		const rayDirY = sin(rayAngle);
-
-		// Evitar división por cero
-		const deltaDistX = Math.abs(1 / rayDirX);
-		const deltaDistY = Math.abs(1 / rayDirY);
-
-		// Posición actual en la grid
-		let mapX = Math.floor(playerX / squareSize);
-		let mapY = Math.floor(playerY / squareSize);
-
-		// Dirección del paso y distancia inicial
-		let stepX, stepY;
-		let sideDistX, sideDistY;
-
-		if (rayDirX < 0) {
-			stepX = -1;
-			sideDistX = (playerX / squareSize - mapX) * deltaDistX;
-		} else {
-			stepX = 1;
-			sideDistX = (mapX + 1.0 - playerX / squareSize) * deltaDistX;
-		}
-
-		if (rayDirY < 0) {
-			stepY = -1;
-			sideDistY = (playerY / squareSize - mapY) * deltaDistY;
-		} else {
-			stepY = 1;
-			sideDistY = (mapY + 1.0 - playerY / squareSize) * deltaDistY;
-		}
-
-		// Realizar DDA
-		let hit = false;
-		let side; // 0 = lado vertical, 1 = lado horizontal
-
-		while (!hit) {
-			// Saltar a la siguiente línea de la grid
-			if (sideDistX < sideDistY) {
-				sideDistX += deltaDistX;
-				mapX += stepX;
-				side = 0;
-			} else {
-				sideDistY += deltaDistY;
-				mapY += stepY;
-				side = 1;
-			}
-
-			// Verificar si golpeamos una pared
-			if (map[mapY]?.[mapX] === 1) {
-				hit = true;
-			}
-		}
-
-		// Calcular distancia y punto de intersección
-		let perpWallDist;
-		if (side === 0) {
-			perpWallDist = (mapX - playerX / squareSize + (1 - stepX) / 2) / rayDirX;
-		} else {
-			perpWallDist = (mapY - playerY / squareSize + (1 - stepY) / 2) / rayDirY;
-		}
-
-		// Calcular punto exacto de intersección
-		const hitX = playerX + perpWallDist * rayDirX * squareSize;
-		const hitY = playerY + perpWallDist * rayDirY * squareSize;
-
-		return {
-			x: hitX,
-			y: hitY,
-			distance: perpWallDist * squareSize,
-			side: side // 0 = vertical, 1 = horizontal
-		};
-	}
-
-	function performRaycasting(ctx) {
-		const rayStep = FOV / RAYS;
-		//const wallDistancePerRay = [];
-
-		for (let i = 0; i < RAYS; i++) {
-			const rayAngle = angle - FOV / 2 + i * rayStep;
-			const singleRay = castRay(rayAngle);
-			//wallDistancePerRay[i] = wallDistance;
-			//drawWallColumn(ctx, i, wallDistance);
-			ctx.beginPath();
-			ctx.moveTo(playerX, playerY);
-			ctx.lineTo(singleRay.x, singleRay.y);
-			ctx.stroke();
-		}
-
-		//renderEnemy(ctx, wallDistancePerRay);
 	}
 
 	// ========================================
@@ -226,22 +129,13 @@
 		ctx.arc(playerX, playerY, playerRadius, 0, 2 * Math.PI);
 		ctx.stroke();
 
-		// Lanzar y dibujar el rayo
-		const rayResult = castRay(angle);
-
-		// Color diferente según el lado golpeado (vertical vs horizontal)
-		ctx.strokeStyle = rayResult.side === 0 ? '#FF6600' : '#FF9900';
+		// Dibujar la línea de dirección
+		ctx.strokeStyle = '#FF0000';
 		ctx.lineWidth = 2;
 		ctx.beginPath();
 		ctx.moveTo(playerX, playerY);
-		ctx.lineTo(rayResult.x, rayResult.y);
+		ctx.lineTo(playerX + playerRadius * 2 * cos(angle), playerY + playerRadius * 2 * sin(angle));
 		ctx.stroke();
-
-		// Dibujar un punto en el final del rayo
-		ctx.fillStyle = rayResult.side === 0 ? '#FF0000' : '#CC6600';
-		ctx.beginPath();
-		ctx.arc(rayResult.x, rayResult.y, 3, 0, 2 * Math.PI);
-		ctx.fill();
 	}
 
 	function generateMap(ctx) {
@@ -275,7 +169,6 @@
 		generateMap(ctx);
 		updatePlayerRotation();
 		updatePlayerMovement();
-		performRaycasting(ctx);
 		drawPlayer(ctx);
 		requestAnimationFrame(gameLoop);
 	}
