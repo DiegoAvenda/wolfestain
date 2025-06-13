@@ -1,33 +1,24 @@
 <script>
 	import { onMount } from 'svelte';
 
-	// ========================================
-	// CONSTANTES Y CONFIGURACIÓN
-	// ========================================
-	const VELOCITY = 3;
-	const FOV = Math.PI / 3; // 60° field of view
-	const RAYS = 100;
-	const STAGGER_FRAME = 6;
-
-	// ========================================
-	// ESTADOS
-	// ========================================
 	let canvas;
 	let canvasWidth = $state(0);
 	let canvasHeight = $state(0);
 	let squareSize = $state(0);
 	let playerRadius = $derived(squareSize / 4);
 	let angle = $state(0);
+	const VELOCITY = 3;
+	const FOV = Math.PI / 3; // 60° field of view
+	const RAYS = 100;
 	let enemyX = $state(0);
 	let enemyY = $state(0);
-	let gameFrame = $state(0);
+	// Posición del jugador ahora es estado mutable
 	let playerX = $state(0);
 	let playerY = $state(0);
 	let middleY = $derived(canvasHeight / 2);
 	let enemyFrameX = $state(0);
 	let enemyFrameY = $state(0);
-	let playerFrameX = $state(0);
-	let isPlayerFiring = $state(false);
+	let enemyImage;
 	let enemyImageLoaded = $state(false);
 	let keysPressed = $state({
 		ArrowRight: false,
@@ -42,18 +33,7 @@
 	const ENEMY_SPRITE_WIDTH = 71;
 	const ENEMY_SPRITE_HEIGHT = 66;
 	const ENEMY_SPRITE_COLUMNS = 4;
-	const ENEMY_ATTACKING_SPRITE_COLUMNS = 2;
-	const PLAYER_SPRITE_WIDTH = 204;
-	const PLAYER_SPRITE_HEIGHT = 216;
-	const PLAYER_SPRITE_COLUMNS = 3;
-	const PLAYER_FRAME_Y = 0;
 
-	let enemyImage;
-	let playerImage;
-
-	// ========================================
-	// MAPA
-	// ========================================
 	const map = [
 		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 		[1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -86,6 +66,9 @@
 		return { dx, dy, distance };
 	}
 
+	// ========================================
+	// DETECCIÓN DE COLISIONES
+	// ========================================
 	function detectCollision(x, y) {
 		const cellX = Math.floor(x / squareSize);
 		const cellY = Math.floor(y / squareSize);
@@ -108,58 +91,26 @@
 	}
 
 	// ========================================
-	// CONTROLES
-	// ========================================
-	function handleKeydown(event) {
-		if (event.key in keysPressed) {
-			keysPressed[event.key] = true;
-		}
-		if (event.key === 'f') {
-			isPlayerFiring = true;
-		}
-	}
-
-	function handleKeyup(event) {
-		if (event.key in keysPressed) {
-			keysPressed[event.key] = false;
-		}
-	}
-
-	function updateCanvasSize() {
-		canvasWidth = window.innerWidth;
-		canvasHeight = window.innerHeight;
-
-		// Calcular el tamaño de celda
-		const minDimension = Math.min(canvasWidth, canvasHeight);
-		squareSize = minDimension / map.length;
-
-		if (playerX === 0 && playerY === 0) {
-			playerX = squareSize * 1.5; // Posición inicial en celda libre
-			playerY = squareSize * 1.5;
-		}
-
-		if (enemyX === 0 && enemyY === 0) {
-			enemyX = squareSize * 7; // Posición del enemigo más alejada para testing
-			enemyY = squareSize * 7;
-		}
-
-		middleY = canvasHeight / 2;
-	}
-
-	// ========================================
 	// MÁQUINA DE ESTADOS DEL ENEMIGO
 	// ========================================
 
 	let currentEnemyState = $state('walking');
+	let enemyAnimationFrame = $state(0);
+	let enemyAnimationTimer = $state(0);
 
 	const enemyStateHandlers = {
 		walking: () => {
 			const { dx, dy, distance } = getEnemyDistanceAndDirection();
-			const ENEMY_VELOCITY = 1.5;
+			const ENEMY_VELOCITY = 1.5; // Velocidad más lenta para debugging
+
+			console.log(`Enemy position: (${enemyX.toFixed(2)}, ${enemyY.toFixed(2)})`);
+			console.log(`Player position: (${playerX.toFixed(2)}, ${playerY.toFixed(2)})`);
+			console.log(`Distance: ${distance.toFixed(2)}`);
 
 			if (distance <= playerRadius + 15) {
 				currentEnemyState = 'attacking';
 				enemyFrameX = 0;
+				console.log('Enemy attacking!');
 				return;
 			}
 
@@ -180,131 +131,27 @@
 					enemyY = newEnemyY;
 				}
 
-				if (gameFrame % STAGGER_FRAME === 0) {
-					enemyFrameX = (enemyFrameX + 1) % ENEMY_SPRITE_COLUMNS;
+				// Animar sprite
+				enemyAnimationTimer++;
+				if (enemyAnimationTimer >= 10) {
+					// Cambiar frame cada 10 updates
+					enemyAnimationFrame = (enemyAnimationFrame + 1) % ENEMY_SPRITE_COLUMNS;
+					enemyFrameX = enemyAnimationFrame;
+					enemyAnimationTimer = 0;
 				}
 			}
 		},
 
 		attacking: () => {
+			console.log('Enemy in attack state');
+			// Lógica de ataque aquí
 			const { distance } = getEnemyDistanceAndDirection();
 			if (distance > playerRadius + 20) {
 				currentEnemyState = 'walking';
-				enemyFrameX = 0;
-				return;
+				console.log('Enemy back to walking');
 			}
-			enemyFrameY = 1;
-			if (gameFrame % (STAGGER_FRAME * 4) === 0) {
-				enemyFrameX = (enemyFrameX + 1) % ENEMY_ATTACKING_SPRITE_COLUMNS;
-			}
-		},
-		taking_damage: () => {
-			enemyFrameY = 2;
-			if (gameFrame % STAGGER_FRAME === 0) {
-				enemyFrameX++;
-				if (enemyFrameX >= ENEMY_SPRITE_COLUMNS) {
-					currentEnemyState = 'dead';
-					enemyFrameX = 3;
-				}
-			}
-		},
-		dead: () => {
-			enemyFrameY = 2;
-			enemyFrameX = 3;
 		}
 	};
-
-	// ========================================
-	// LÓGICA DEL JUGADOR
-	// ========================================
-	function updatePlayerRotation() {
-		if (keysPressed.ArrowRight) angle += 0.05;
-		if (keysPressed.ArrowLeft) angle -= 0.05;
-	}
-
-	function updatePlayerMovement() {
-		let deltaX = 0;
-		let deltaY = 0;
-
-		if (keysPressed.ArrowUp) {
-			deltaX = cos(angle) * VELOCITY;
-			deltaY = sin(angle) * VELOCITY;
-		}
-		if (keysPressed.ArrowDown) {
-			deltaX = -cos(angle) * VELOCITY;
-			deltaY = -sin(angle) * VELOCITY;
-		}
-
-		const nextX = playerX + deltaX;
-		const nextY = playerY + deltaY;
-
-		// Usar los 8 puntos del círculo para verificación precisa
-		if (!checkCircleCollision(nextX, playerY)) playerX = nextX;
-		if (!checkCircleCollision(playerX, nextY)) playerY = nextY;
-	}
-
-	function updatePlayerAnimation() {
-		if (isPlayerFiring && gameFrame % STAGGER_FRAME === 0) {
-			playerFrameX++;
-			if (playerFrameX >= PLAYER_SPRITE_COLUMNS) {
-				isPlayerFiring = false;
-				playerFrameX = 0;
-			}
-		}
-	}
-
-	function drawPlayer(ctx) {
-		const PLAYER_IMAGE_SIZE = 128 * 2;
-		ctx.drawImage(
-			playerImage,
-			playerFrameX * PLAYER_SPRITE_WIDTH,
-			PLAYER_FRAME_Y * PLAYER_SPRITE_HEIGHT,
-			PLAYER_SPRITE_WIDTH,
-			PLAYER_SPRITE_HEIGHT,
-			canvasWidth / 2 - PLAYER_IMAGE_SIZE / 2,
-			canvasHeight - PLAYER_IMAGE_SIZE,
-			PLAYER_IMAGE_SIZE,
-			PLAYER_IMAGE_SIZE
-		);
-	}
-
-	// ========================================
-	// LÓGICA DEL ENEMIGO
-	// ========================================
-	function damageEnemy() {
-		if (currentEnemyState !== 'dead') {
-			currentEnemyState = 'taking_damage';
-			enemyFrameX = 0;
-		}
-	}
-
-	function processPlayerShooting() {
-		if (!isPlayerFiring || currentEnemyState === 'dead' || currentEnemyState === 'taking_damage')
-			return;
-
-		const dx = enemyX - playerX;
-		const dy = enemyY - playerY;
-		const enemyAngle = Math.atan2(dy, dx);
-		const angleDifference = enemyAngle - angle;
-
-		if (angleDifference < FOV / 32) {
-			damageEnemy();
-		}
-	}
-
-	function drawEnemy(ctx, enemySpriteX, enemySpriteY, enemySize) {
-		ctx.drawImage(
-			enemyImage,
-			enemyFrameX * ENEMY_SPRITE_WIDTH,
-			enemyFrameY * ENEMY_SPRITE_HEIGHT,
-			ENEMY_SPRITE_WIDTH,
-			ENEMY_SPRITE_HEIGHT,
-			enemySpriteX,
-			enemySpriteY,
-			enemySize,
-			enemySize
-		);
-	}
 
 	// ========================================
 	// RAYCASTING
@@ -375,14 +222,10 @@
 		const hitX = playerX + perpWallDist * rayDirX * squareSize;
 		const hitY = playerY + perpWallDist * rayDirY * squareSize;
 
-		const distance = perpWallDist * squareSize;
-
-		const correctedDistance = distance * cos(rayAngle - angle);
-
 		return {
 			x: hitX,
 			y: hitY,
-			distance: correctedDistance,
+			distance: perpWallDist * squareSize,
 			side: side // 0 = vertical, 1 = horizontal
 		};
 	}
@@ -392,16 +235,18 @@
 		const columnWidth = canvasWidth / RAYS;
 		const columnX = columnIndex * columnWidth;
 
+		// Color diferente para paredes según el lado
+		ctx.fillStyle = wallDistance > 0 ? '#666666' : '#999999';
 		ctx.fillRect(columnX, canvasHeight / 2 - columnHeight / 2, columnWidth, columnHeight);
 	}
 
 	function renderEnemy(ctx, wallDistancePerRay) {
+		if (!enemyImageLoaded) return;
+
 		const dx = enemyX - playerX;
 		const dy = enemyY - playerY;
 		const enemyDistance = calculateDistance(playerX, playerY, enemyX, enemyY);
 		const enemyAngle = Math.atan2(dy, dx);
-
-		processPlayerShooting();
 
 		// Normalizar el ángulo para que esté dentro del rango [-PI, PI]
 		let angleDifference = enemyAngle - angle;
@@ -427,7 +272,7 @@
 		for (let i = 0; i < RAYS; i++) {
 			const rayAngle = angle - FOV / 2 + i * rayStep;
 			const wallResult = castRay(rayAngle);
-			wallDistancePerRay[i] = wallResult.distance;
+			wallDistancePerRay[i] = wallResult;
 			drawWallColumn(ctx, i, wallResult.distance);
 		}
 
@@ -436,60 +281,107 @@
 	}
 
 	// ========================================
-	// MINIMAPA
+	// CONTROLES
 	// ========================================
-	function drawMiniMap(ctx) {
-		const MINI_MAP_SIZE = 200;
-		const miniMapScale = MINI_MAP_SIZE / canvasWidth;
+	function handleKeydown(event) {
+		if (event.key in keysPressed) {
+			keysPressed[event.key] = true;
+		}
+	}
 
-		for (let y = 0; y < map.length; y++) {
-			for (let x = 0; x < map[y].length; x++) {
-				const cellX = squareSize * x * miniMapScale;
-				const cellY = squareSize * y * miniMapScale;
-				const cellSize = squareSize * miniMapScale;
+	function handleKeyup(event) {
+		if (event.key in keysPressed) {
+			keysPressed[event.key] = false;
+		}
+	}
 
-				if (map[y][x] === 1) {
-					ctx.fillRect(cellX, cellY, cellSize, cellSize);
-				}
-				ctx.strokeRect(cellX, cellY, cellSize, cellSize);
-			}
+	function updateCanvasSize() {
+		canvasWidth = window.innerWidth;
+		canvasHeight = window.innerHeight;
+
+		// Calcular el tamaño de celda
+		const minDimension = Math.min(canvasWidth, canvasHeight);
+		squareSize = minDimension / map.length;
+
+		if (playerX === 0 && playerY === 0) {
+			playerX = squareSize * 1.5; // Posición inicial en celda libre
+			playerY = squareSize * 1.5;
 		}
 
-		ctx.beginPath();
-		ctx.arc(
-			playerX * miniMapScale,
-			playerY * miniMapScale,
-			playerRadius * miniMapScale,
-			0,
-			2 * Math.PI
-		);
-		ctx.stroke();
+		if (enemyX === 0 && enemyY === 0) {
+			enemyX = squareSize * 7; // Posición del enemigo más alejada para testing
+			enemyY = squareSize * 7;
+		}
 
-		ctx.beginPath();
-		ctx.moveTo(playerX * miniMapScale, playerY * miniMapScale);
-		ctx.lineTo(
-			(playerX + playerRadius * 2 * cos(angle)) * miniMapScale,
-			(playerY + playerRadius * 2 * sin(angle)) * miniMapScale
-		);
-		ctx.stroke();
+		middleY = canvasHeight / 2;
 	}
 
 	// ========================================
-	// BUCLE PRINCIPAL
+	// LÓGICA DEL JUGADOR
 	// ========================================
+	function updatePlayerRotation() {
+		if (keysPressed.ArrowRight) angle += 0.05;
+		if (keysPressed.ArrowLeft) angle -= 0.05;
+	}
+
+	function updatePlayerMovement() {
+		let deltaX = 0;
+		let deltaY = 0;
+
+		if (keysPressed.ArrowUp) {
+			deltaX = cos(angle) * VELOCITY;
+			deltaY = sin(angle) * VELOCITY;
+		}
+		if (keysPressed.ArrowDown) {
+			deltaX = -cos(angle) * VELOCITY;
+			deltaY = -sin(angle) * VELOCITY;
+		}
+
+		const nextX = playerX + deltaX;
+		const nextY = playerY + deltaY;
+
+		// Usar los 8 puntos del círculo para verificación precisa
+		if (!checkCircleCollision(nextX, playerY)) playerX = nextX;
+		if (!checkCircleCollision(playerX, nextY)) playerY = nextY;
+	}
+
+	// ========================================
+	// LÓGICA DEL ENEMIGO
+	// ========================================
+
+	function drawEnemy(ctx, enemySpriteX, enemySpriteY, enemySize) {
+		if (enemyImageLoaded) {
+			ctx.drawImage(
+				enemyImage,
+				enemyFrameX * ENEMY_SPRITE_WIDTH,
+				enemyFrameY * ENEMY_SPRITE_HEIGHT,
+				ENEMY_SPRITE_WIDTH,
+				ENEMY_SPRITE_HEIGHT,
+				enemySpriteX,
+				enemySpriteY,
+				enemySize,
+				enemySize
+			);
+		} else {
+			// Fallback: dibujar un rectángulo rojo si no hay imagen
+			ctx.fillStyle = '#FF0000';
+			ctx.fillRect(enemySpriteX, enemySpriteY, enemySize, enemySize);
+		}
+	}
+
 	function gameLoop() {
 		const ctx = canvas.getContext('2d');
 		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
 		updatePlayerRotation();
 		updatePlayerMovement();
-		enemyStateHandlers[currentEnemyState]?.();
-		updatePlayerAnimation();
-		gameFrame++;
+
+		// Ejecutar lógica del enemigo
+		if (enemyStateHandlers[currentEnemyState]) {
+			enemyStateHandlers[currentEnemyState]();
+		}
 
 		performRaycasting(ctx);
-		drawMiniMap(ctx);
-		drawPlayer(ctx);
 
 		requestAnimationFrame(gameLoop);
 	}
@@ -497,9 +389,16 @@
 	onMount(() => {
 		updateCanvasSize(); // Configurar tamaño inicial
 
-		playerImage = new Image();
-		playerImage.src = '/weapon.png';
+		// Cargar imagen del enemigo
 		enemyImage = new Image();
+		enemyImage.onload = () => {
+			enemyImageLoaded = true;
+			console.log('Enemy image loaded successfully');
+		};
+		enemyImage.onerror = () => {
+			console.log('Failed to load enemy image, using fallback');
+			enemyImageLoaded = false;
+		};
 		enemyImage.src = '/boss.png';
 
 		gameLoop();
